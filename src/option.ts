@@ -66,6 +66,13 @@ export const Option = {
   is_option(value: unknown): value is Option<unknown> {
     return typeof value === "object" && value !== null && HIDDEN_OPTION_TAG in value;
   },
+  is_none(value: any) {
+    // @ts-ignore
+    return value === null || value === undefined || value === NaN;
+  },
+  is_some(value: any) {
+    return !Option.is_none(value);
+  },
   match<T, U>(option: Option<T>, { Some, None }: { Some: (val: T) => U; None: () => U }): U {
     if (option.is_some()) return Some(option.value);
     else return None();
