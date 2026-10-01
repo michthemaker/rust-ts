@@ -4,11 +4,15 @@ import { SerializableThreadAsset, ThreadEnvelope, TRANSFER_SYMBOL } from "./prot
 
 type Result<T> = Core_Result<T, unknown>;
 
+type JoinHandleOptions = {
+  on_create?: (worker: Worker) => void;
+};
+
 class JoinHandle<T> {
   private worker: Worker;
   private join_promise: Promise<Result<T>>;
 
-  constructor(worker_code: string) {
+  constructor(worker_code: string, options?: JoinHandleOptions) {
     const blob = new Blob([worker_code], { type: "text/javascript" });
     const worker_url = URL.createObjectURL(blob);
     this.worker = new Worker(new URL(worker_url));
@@ -50,78 +54,55 @@ class JoinHandle<T> {
         { once: true },
       );
     });
+
+    // handle options here
+    if (options?.on_create) {
+      options.on_create(this.worker);
+    }
   }
 
   async join() {
     return this.join_promise;
   }
+
+  async get_worker() {
+    return this.worker;
+  }
 }
 
-class MoveToken {
-  constructor(public args: any[]) {}
+class MoveToken<T extends any[] = any[]> {
+  constructor(public args: T) {}
 }
 
-function move(...args: any[]): MoveToken {
-  return new MoveToken(args);
+declare global {
+  var move: <T extends any[]>(...args: T) => MoveToken<T>;
 }
 
-globalThis.addEventListener("message", (event) => {
-  event.p;
-});
+globalThis.move =
+  globalThis.move ||
+  function move<T extends any[]>(...args: T): MoveToken<T> {
+    return new MoveToken(args);
+  };
 
 interface Threads {
   spawn<U, T = Awaited<U>>(f: () => U): JoinHandle<T>;
   spawn<Args extends any[], U, T = Awaited<U>>(
-    token: MoveToken,
+    token: MoveToken<Args>,
     f: (...args: Args) => U,
   ): JoinHandle<T>;
 }
 
-/**
- * ```javascript
- * 	self.onmessage = async (event) => {
-   try {
-     const rawArgs = event.data.args || [];
-     const ports = event.ports || [];
-     let portIndex = 0;
-
-     const runtimeArgs = rawArgs.map((arg) => {
-       // If it matches our custom envelope schema, rehydrate it on the fly!
-       if (arg && typeof arg === "object" && arg.__is_envelope === true) {
-         const hydrator = globalThis.__THREAD_HYDRATORS__.get(arg.brand);
-         if (!hydrator) {
-           throw new Error("Missing hydration handler inside worker for brand: " + arg.brand);
-         }
-         const activePort = ports[portIndex++];
-         return hydrator(arg.data, activePort);
-       }
-       return arg;
-     });
-
-     const result = await (async () => {
-       return (${f.toString()})(...runtimeArgs);
-     })();
-
-     postMessage({ ok: true, value: result });
-   } catch (panicError) {
-     postMessage({ ok: false, error: panicError });
-   }
- };
-
- * ```
- */
 const threads: Threads = {
   // they can pass a sync or async function we will get the value and send to them after unwrapping it.
-  spawn(arg1, arg2) {
+  spawn(arg1: MoveToken | Function, arg2?: Function) {
     let fn: Function;
     let serialized_args_payload: any[] = [];
 
     if (arg1 instanceof MoveToken) {
-      fn = arg2;
+      fn = arg2!;
       for (const argument of arg1.args) {
         if (SerializableThreadAsset.is_serializable(argument)) {
           const extraction = argument[TRANSFER_SYMBOL]();
-
           const envelope: ThreadEnvelope = {
             __is_envelope: true,
             ...extraction,
@@ -131,32 +112,42 @@ const threads: Threads = {
       }
     } else fn = arg1;
 
-    const code = `
-    (async () => {
-      try {
-        const result = await (async () => {
-        	return (${f.toString()})()
-        })();
-        if (typeof parentPort !== "undefined") {
-          parentPort.postMessage(result);
-        } else if (typeof postMessage !== "undefined") {
-          postMessage(result);
-        }
-      } catch (panicError) {
-        const errorPayload = { ok: false, error: panicError, ${HIDDEN_RESULT_TAG}: true };
-        if (typeof parentPort !== "undefined") {
-          parentPort.postMessage(errorPayload);
-        } else if (typeof postMessage !== "undefined") {
-          postMessage(errorPayload);
-        }
-      }
-    })()
-    `;
+    const code = `self.onmessage = async (event) => {
+  try {
+    const rawArgs = event.data.args || [];
 
-    return new JoinHandle(code);
+        console.log(rawArgs)
+    const runtimeArgs = rawArgs.map((arg) => {
+      // If it matches our custom envelope schema, rehydrate it on the fly!
+      if (arg && typeof arg === "object" && arg.__is_envelope === true) {
+        const hydrator = globalThis.__INTERNAL_RUST_THREAD_HYDRATORS__.get(arg.brand);
+        if (!hydrator) {
+          throw new Error("Missing hydration handler inside worker for brand: " + arg.brand);
+        }
+        return hydrator(arg.data);
+      }
+      return arg;
+    });
+
+    const result = await (async () => {
+      return (${fn.toString()})(...runtimeArgs);
+    })();
+
+    // this makes it a result type
+    postMessage({ ok: true, value: result, ${HIDDEN_RESULT_TAG}: true });
+  } catch (panicError) {
+    postMessage({ ok: false, error: panicError, ${HIDDEN_RESULT_TAG}: true });
+  }
+};`;
+
+    const handle = new JoinHandle(code, {
+      on_create: (worker) => {
+        worker.postMessage({ args: serialized_args_payload });
+      },
+    });
+
+    return handle;
   },
 };
 
-export { threads, move };
-
-// The background worker uses the global registry to reconstruct incoming payloads
+export { threads };

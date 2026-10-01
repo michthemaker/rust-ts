@@ -1,4 +1,4 @@
-import { channel, Sender } from "./mpsc_channel";
+import { channel, Sender } from "./spsc_channel";
 import { OnceLock } from "./once-lock";
 import { Result } from "./result";
 import { threads } from "./threads";
@@ -14,25 +14,25 @@ async function setup_brightness_worker() {
   const [raw_tx, rx] = channel<number>();
   using tx = raw_tx;
   BRIGHTNESS_SENDER.set(tx);
+  const number = 5;
 
-  const thread = threads.spawn(() => {
-    console.log("value here");
-    return "me";
-  });
+  const thread = threads.spawn(move(rx, number), (rx, number) => {});
 
   const joined = await thread.join();
   Result.match(joined, {
-    Ok(val) {
-      console.log(val, "hear");
-    },
+    Ok() {},
     Err(err) {
-      console.log(err, " my error");
+      console.log(err);
     },
   });
 }
 
 async function main() {
   setup_brightness_worker();
+
+  setTimeout(() => {
+    set_brightness(50);
+  }, 3000);
 }
 
 main();
