@@ -1,6 +1,6 @@
-import { threads } from "./threads";
-import { channel } from "./mpsc_channel.ts";
-import { Result } from "./result.ts";
+import { threads } from "./src/threads.ts";
+import { channel } from "./src/mpsc_channel.ts";
+import { Result } from "./src/result.ts";
 
 const [tx, rx] = channel<number>();
 
@@ -11,9 +11,9 @@ async function main() {
 
   // Consumer
   const joined = await threads
-    .spawn(move(rx), async (rx) => {
+    .spawn(move(4), async (number) => {
       console.log(move);
-      console.log("i am this number", rx);
+      console.log("i am this number", number);
     })
     .join();
 
