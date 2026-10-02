@@ -1,5 +1,5 @@
-import { threads } from "./src/threads.ts";
-import { channel } from "./src/mpsc_channel.ts";
+import { threads } from "./src/threads/threads.ts";
+import { channel } from "./src/sync/mpmc_channel.ts";
 import { Result } from "./src/result.ts";
 
 const [tx, rx] = channel<number>();
@@ -11,9 +11,17 @@ async function main() {
 
   // Consumer
   const joined = await threads
-    .spawn(move(4), async (number) => {
-      console.log(move);
-      console.log("i am this number", number);
+    .spawn(move(rx), async (rx) => {
+      const { Option } =
+        // await import('./src/option.ts') should give the below from patch_dynamic_imports
+        await import("C:\\Users\\TheMaker\\Documents\\Work\\deliverables\\rust-ts\\src\\option.ts");
+      const option = Option.Some(rx);
+      Option.match(option, {
+        Some(val) {
+          console.log(val.iter());
+        },
+        None() {},
+      });
     })
     .join();
 

@@ -95,6 +95,7 @@ export function patch_dynamic_imports(code: string, callerLocation: string): str
     modifiedCode = before + rep.text + after;
   }
 
+  console.log(modifiedCode);
   return modifiedCode;
 }
 

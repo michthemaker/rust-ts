@@ -1,4 +1,4 @@
-import { Result } from "./result.ts";
+import { Result } from "../result.ts";
 
 class OnceLock<T> {
   private value: T | null = null;
