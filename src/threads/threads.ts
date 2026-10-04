@@ -3,6 +3,7 @@ import { Result as Core_Result } from "../result";
 import { WorkerPayload } from "./types";
 import { serialize } from "./serializable";
 import { Transferable } from "./transferable";
+import { get_caller_location } from "../../lib/get_caller_location";
 
 type Result<T> = Core_Result<T, unknown>;
 
@@ -14,7 +15,7 @@ class JoinHandle<T> {
   private worker: Worker;
   private join_promise: Promise<Result<T>>;
 
-  constructor(fn: Function, raw_args: UnserializedArgs) {
+  constructor(fn: Function, raw_args: UnserializedArgs, caller: string) {
     this.worker = new Worker(new URL("./worker.ts", import.meta.url), {
       type: "module",
     });
@@ -61,6 +62,7 @@ class JoinHandle<T> {
       {
         __INTERNAL_RUST_THREAD_PAYLOAD_BRAND__: true,
         fn: fn.toString(),
+        caller,
         raw_args: serialized_args,
       } as WorkerPayload,
       transfer_list,
@@ -137,6 +139,8 @@ interface Threads {
 const threads: Threads = {
   // they can pass a sync or async function we will get the value and send to them after unwrapping it.
   spawn(arg1: any, arg2?: any) {
+    // Captured on the main thread: the worker's own stack points at worker.ts.
+    const caller = get_caller_location(threads.spawn).filePath;
     let fn: Function;
     let args: any[] = [];
 
@@ -148,7 +152,7 @@ const threads: Threads = {
       fn = arg1;
     }
 
-    const handle = new JoinHandle(fn, args);
+    const handle = new JoinHandle(fn, args, caller);
 
     return handle;
   },

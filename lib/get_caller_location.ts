@@ -58,8 +58,12 @@ function isInternalFrame(filePath: string): boolean {
  * Analyzes the stack trace to find the file and coordinates
  * where this function was called.
  */
-export function get_caller_location(): CallerLocation {
-  const stack = new Error().stack;
+export function get_caller_location(skip_until?: Function): CallerLocation {
+  // `skip_until` drops every frame above (and including) that function, so
+  // library wrappers like `threads.spawn` never count as the "caller".
+  const holder: { stack?: string } = {};
+  Error.captureStackTrace(holder, skip_until ?? get_caller_location);
+  const stack = holder.stack;
   if (!stack) {
     throw new Error("This runtime did not provide a stack trace");
   }

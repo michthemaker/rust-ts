@@ -6,14 +6,13 @@ import "./threads.ts"; // Registers spawn/move hydrators
 import { type BunMessageEvent } from "bun";
 import { HIDDEN_RESULT_TAG } from "../result.ts";
 import { patch_dynamic_imports } from "../../lib/patch_dynamic_import.ts";
-import { get_caller_location } from "../../lib/get_caller_location.ts";
 import { type WorkerPayload } from "./types";
 import { deserialize } from "./serializable.ts";
 
 globalThis.addEventListener(
   "message",
   async (event: BunMessageEvent<WorkerPayload>) => {
-    const { raw_args, fn: func_string, ...data } = event.data;
+    const { raw_args, fn: func_string, caller, ...data } = event.data;
 
     const activeArgs = new Array(raw_args.length);
 
@@ -22,10 +21,7 @@ globalThis.addEventListener(
       for (let i = 0; i < raw_args.length; i++) {
         activeArgs[i] = deserialize(raw_args[i]!);
       }
-      const code = patch_dynamic_imports(
-        "export default " + func_string,
-        get_caller_location().filePath,
-      );
+      const code = patch_dynamic_imports("export default " + func_string, caller);
       const base_64_code = btoa(code);
       const data_url = `data:text/javascript;base64,${base_64_code}`;
       const mod = await import(data_url);

@@ -1,3 +1,5 @@
+import { SerializableId } from "./serializable";
+
 export type SharedMemoryView =
   | Int8Array<SharedArrayBuffer>
   | Uint8Array<SharedArrayBuffer>
@@ -15,12 +17,16 @@ export type SharedMemoryView =
 
 /**
  * The wire format.
- * [type, value, typeId (optional, only for LIB)]
+ * [type, value, serializable_id (optional, only for LIB or anything that implements Serializable)]
  */
-export type Envelope = readonly [PayloadType.RAW, any] | readonly [PayloadType.LIB, any, number];
+export type Envelope =
+  | readonly [PayloadType.RAW, any]
+  | readonly [PayloadType.LIB, any, SerializableId];
 
 export type WorkerPayload = {
   __INTERNAL_RUST_THREAD_PAYLOAD_BRAND__: true;
   fn: string;
+  /** File that called `threads.spawn`; relative `import()` paths resolve against it. */
+  caller: string;
   raw_args: any[];
 };

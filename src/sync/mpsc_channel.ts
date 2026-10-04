@@ -30,7 +30,7 @@ const ERR_SPURIOUS = new Error("Spurious wakeup or illegal null value");
 
 class ChannelInternals<T> extends Serializable {
   static {
-    register(4, this);
+    register("rust-ts::mpsc::ChannelInternals", this);
   }
 
   constructor(
@@ -134,7 +134,7 @@ abstract class ChannelHandle<T> extends Serializable implements Disposable {
 
 export class Sender<T> extends ChannelHandle<T> {
   static {
-    register(5, this);
+    register("rust-ts::mpsc::Sender", this);
   }
 
   protected get disposeError() {
@@ -256,7 +256,7 @@ export class Sender<T> extends ChannelHandle<T> {
 
 export class Receiver<T> extends ChannelHandle<T> {
   static {
-    register(6, this);
+    register("rust-ts::mpsc::Receiver", this);
   }
 
   protected get disposeError() {

@@ -6,7 +6,8 @@ export function patch_dynamic_imports(code: string, callerLocation: string): str
   // Normalize callerLocation to be a valid URL (file:// or http://).
   let normalizedCaller = callerLocation;
 
-  if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(normalizedCaller)) {
+  // Require 2+ scheme chars so a Windows drive letter ("C:\...") is not mistaken for a URL scheme.
+  if (!/^[a-zA-Z][a-zA-Z0-9+.-]+:/.test(normalizedCaller)) {
     // Windows fix
     normalizedCaller = normalizedCaller.replace(/\\/g, "/");
     if (!normalizedCaller.startsWith("/")) {

@@ -43,7 +43,7 @@ export class SemaphoreGuard implements Disposable {
 
 export class Semaphore extends Serializable {
   static {
-    register(3, this);
+    register("rust-ts::sync::Semaphore", this);
   }
 
   readonly #state: Int32Array<SharedArrayBuffer>;

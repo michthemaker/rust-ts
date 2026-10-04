@@ -1,4 +1,4 @@
-type TransferableType = NonNullable<StructuredSerializeOptions["transfer"]>[number];
+type TransferableType = NonNullable<any[]>[number];
 
 const CANDIDATES = [
   "ArrayBuffer",

@@ -42,19 +42,24 @@ export abstract class Serializable {
          */
         Transferable[],
         /**
-         * typeId (Escape hatch for proxies)
+         * serializable_id (Escape hatch for proxies)
          */
-        number,
+        SerializableId,
       ];
   static [to_deserialized](_obj: unknown): Serializable {
     throw new Error(`[to_deserialized] not implemented for ${this.name}`);
   }
 }
 
-const class_registry = new Map<number, SerializableConstructor>();
-const reverse_class_registry = new Map<SerializableConstructor, number>();
+/**
+ * @example `rust-ts::mpsc::Sender`
+ */
+export type SerializableId = `rust-ts::${string}::${string}`;
 
-export function register(typeId: number, cls: SerializableConstructor) {
+const class_registry = new Map<SerializableId, SerializableConstructor>();
+const reverse_class_registry = new Map<SerializableConstructor, SerializableId>();
+
+export function register(typeId: SerializableId, cls: SerializableConstructor) {
   class_registry.set(typeId, cls);
   reverse_class_registry.set(cls, typeId);
 }

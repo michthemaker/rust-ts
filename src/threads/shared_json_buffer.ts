@@ -73,10 +73,12 @@ function countUtf8Bytes(str: string): number {
   return byteLen;
 }
 
+const SharedJsonBufferImplId = "rust-ts::threads::SharedJsonBufferImpl" as const;
+
 class SharedJsonBufferImpl<T extends Proxyable> extends Serializable {
   static {
     initConsoleHooks();
-    register(7, this);
+    register(SharedJsonBufferImplId, this);
   }
 
   // Views
@@ -1428,7 +1430,7 @@ class SharedJsonBufferImpl<T extends Proxyable> extends Serializable {
   }
 
   [to_serialized]() {
-    return [this.buffer, [] as any, 7] as const;
+    return [this.buffer, [] as any, SharedJsonBufferImplId] as const;
   }
 
   static override [to_deserialized](
