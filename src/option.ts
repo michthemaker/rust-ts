@@ -68,13 +68,9 @@ export const Option = {
   },
   is_none(value: any) {
     // @ts-ignore
-    return value === null || value === undefined || value === NaN;
+    return value === null || value === undefined || Number.isNaN(value);
   },
   is_some(value: any) {
     return !Option.is_none(value);
-  },
-  match<T, U>(option: Option<T>, { Some, None }: { Some: (val: T) => U; None: () => U }): U {
-    if (option.is_some()) return Some(option.value);
-    else return None();
   },
 };
