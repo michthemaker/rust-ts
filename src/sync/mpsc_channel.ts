@@ -9,6 +9,7 @@ import {
 import { Result } from "../result.ts";
 import { INTERNAL_SEMAPHORE_CONTROLLER, Semaphore } from "./semaphore.ts";
 import { SharedJsonBuffer } from "../threads/shared_json_buffer.ts";
+import { Option } from "../option.ts";
 
 const IDX_HEAD = 0;
 const IDX_TAIL = 1;
@@ -27,6 +28,7 @@ const ERR_DISPOSED_RECEIVER = new Error("Receiver disposed");
 const ERR_CLOSED = new Error("Channel closed");
 const ERR_CLOSED_NO_RX = new Error("Channel closed (No Receivers)");
 const ERR_SPURIOUS = new Error("Spurious wakeup or illegal null value");
+const ERR_NULL_VALUE = new Error("Cannot send null or undefined");
 
 class ChannelInternals<T> extends Serializable {
   static {
@@ -34,8 +36,13 @@ class ChannelInternals<T> extends Serializable {
   }
 
   constructor(
+    /**
+     * @structure [HEAD, TAIL, CLOSED, CAP, TX_COUNT, RX_COUNT]
+     * @example [0, 0, 0 | 1, default 32, number of senders, number of receivers 0 | 1]
+     */
     public state: Int32Array<SharedArrayBuffer>,
     public items: SharedJsonBuffer<(T | null)[]>,
+    // TAIL is only touched while holding send_lock; HEAD only while holding recv_lock.
     public send_lock: Semaphore,
     public recv_lock: Semaphore,
     public items_available: Semaphore,
@@ -66,8 +73,8 @@ class ChannelInternals<T> extends Serializable {
     return Atomics.load(this.state, IDX_CLOSED) === CLOSED;
   }
 
-  has_receivers(): boolean {
-    return Atomics.load(this.state, IDX_RX_COUNT) > 0;
+  has_receiver(): boolean {
+    return Atomics.load(this.state, IDX_RX_COUNT) === 1;
   }
 
   [to_serialized]() {
@@ -148,10 +155,12 @@ export class Sender<T> extends ChannelHandle<T> {
   }
 
   async send(value: T): Promise<Result<void, Error>> {
+    if (Option.is_none(value)) return Result.Err(ERR_NULL_VALUE);
+
     const disposed_check = this.check_disposed();
     if (disposed_check.is_err()) return disposed_check;
 
-    if (!this.internals.has_receivers()) {
+    if (!this.internals.has_receiver()) {
       return Result.Err(ERR_CLOSED_NO_RX);
     }
 
@@ -183,10 +192,12 @@ export class Sender<T> extends ChannelHandle<T> {
   }
 
   blocking_send(value: T): Result<void, Error> {
+    if (Option.is_none(value)) return Result.Err(ERR_NULL_VALUE);
+
     const disposed_check = this.check_disposed();
     if (disposed_check.is_err()) return disposed_check;
 
-    if (!this.internals.has_receivers()) {
+    if (!this.internals.has_receiver()) {
       return Result.Err(ERR_CLOSED_NO_RX);
     }
 
@@ -220,26 +231,15 @@ export class Sender<T> extends ChannelHandle<T> {
   close() {
     if (this.disposed || this.internals.is_closed()) return;
 
-    const {
-      state,
-      slots_available: slots_available,
-      items_available: items_available,
-      send_lock: sendLock,
-      recv_lock: recvLock,
-    } = this.internals;
-    const g1 = sendLock.blocking_acquire();
-    const g2 = recvLock.blocking_acquire();
+    const { state, slots_available, items_available } = this.internals;
 
-    try {
-      if (this.internals.is_closed()) return;
-      Atomics.store(state, IDX_CLOSED, CLOSED);
-      // Wake up everyone
-      slots_available[INTERNAL_SEMAPHORE_CONTROLLER].release(1_073_741_823);
-      items_available[INTERNAL_SEMAPHORE_CONTROLLER].release(1_073_741_823);
-    } finally {
-      g1[Symbol.dispose]();
-      g2[Symbol.dispose]();
-    }
+    // Atomic "only one closer wins": no locks needed, so close() never blocks.
+    // This also guarantees the permit release below runs at most once (no Int32 overflow).
+    if (Atomics.compareExchange(state, IDX_CLOSED, OPEN, CLOSED) !== OPEN) return;
+
+    // Wake up everyone blocked in send()/recv(); they re-check is_closed().
+    slots_available[INTERNAL_SEMAPHORE_CONTROLLER].release(1_073_741_823);
+    items_available[INTERNAL_SEMAPHORE_CONTROLLER].release(1_073_741_823);
   }
 
   [Symbol.dispose]() {
@@ -261,12 +261,6 @@ export class Receiver<T> extends ChannelHandle<T> {
 
   protected get disposeError() {
     return ERR_DISPOSED_RECEIVER;
-  }
-
-  clone(): Receiver<T> {
-    if (this.disposed) throw new Error("Cannot clone disposed Receiver");
-    Atomics.add(this.internals.state, IDX_RX_COUNT, 1);
-    return new Receiver(this.internals);
   }
 
   async recv(): Promise<Result<T, Error>> {
@@ -297,7 +291,7 @@ export class Receiver<T> extends ChannelHandle<T> {
 
   blocking_recv(): Result<T, Error> {
     const disposed_check = this.check_disposed();
-    if (disposed_check) return disposed_check as Result<T, Error>;
+    if (disposed_check.is_err()) return disposed_check as Result<T, Error>;
 
     const item_token = this.internals.items_available.blocking_acquire();
     let val: T | null;
@@ -323,14 +317,13 @@ export class Receiver<T> extends ChannelHandle<T> {
     return Result.Ok(val);
   }
 
-  async *[Symbol.asyncIterator](): AsyncGenerator<T, void, void> {
+  async *iter(): AsyncGenerator<T, void, void> {
     while (true) {
       const result = await this.recv();
       if (result.ok) {
         yield result.value;
       } else {
-        const msg = result.error.message;
-        if (msg === ERR_CLOSED.message || msg === ERR_DISPOSED_RECEIVER.message) {
+        if (result.error === ERR_CLOSED || result.error === ERR_DISPOSED_RECEIVER) {
           return;
         }
         throw result.error;
@@ -358,14 +351,19 @@ export class Receiver<T> extends ChannelHandle<T> {
 
 export function channel<T>(
   capacity: number = 32,
+  /**
+   * @dev this is a byte budget for underlying SharedJsonBuffer
+   */
   options?: { size?: number },
 ): [Sender<T>, Receiver<T>] {
+  if (!Number.isInteger(capacity) || capacity < 1)
+    throw new Error("capacity must be an integer >= 1");
   const state = new Int32Array(new SharedArrayBuffer(META_SIZE * Int32Array.BYTES_PER_ELEMENT));
 
-  state[IDX_CAP] = capacity;
   state[IDX_HEAD] = 0;
   state[IDX_TAIL] = 0;
   state[IDX_CLOSED] = OPEN;
+  state[IDX_CAP] = capacity;
   state[IDX_TX_COUNT] = 1;
   state[IDX_RX_COUNT] = 1;
 

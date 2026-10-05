@@ -9,6 +9,7 @@ import {
 import { Result } from "../result.ts";
 import { INTERNAL_SEMAPHORE_CONTROLLER, Semaphore } from "./semaphore.ts";
 import { SharedJsonBuffer } from "../threads/shared_json_buffer.ts";
+import { Option } from "../option.ts";
 
 const IDX_HEAD = 0;
 const IDX_TAIL = 1;
@@ -27,6 +28,7 @@ const ERR_DISPOSED_RECEIVER = new Error("Receiver disposed");
 const ERR_CLOSED = new Error("Channel closed");
 const ERR_CLOSED_NO_RX = new Error("Channel closed (No Receivers)");
 const ERR_SPURIOUS = new Error("Spurious wakeup or illegal null value");
+const ERR_NULL_VALUE = new Error("Cannot send null or undefined");
 
 class ChannelInternals<T> extends Serializable {
   static {
@@ -148,6 +150,8 @@ export class Sender<T> extends ChannelHandle<T> {
   }
 
   async send(value: T): Promise<Result<void, Error>> {
+    if (Option.is_none(value)) return Result.Err(ERR_NULL_VALUE);
+
     const disposed_check = this.check_disposed();
     if (disposed_check.is_err()) return disposed_check;
 
@@ -183,6 +187,8 @@ export class Sender<T> extends ChannelHandle<T> {
   }
 
   blocking_send(value: T): Result<void, Error> {
+    if (Option.is_none(value)) return Result.Err(ERR_NULL_VALUE);
+
     const disposed_check = this.check_disposed();
     if (disposed_check.is_err()) return disposed_check;
 
@@ -222,8 +228,8 @@ export class Sender<T> extends ChannelHandle<T> {
 
     const {
       state,
-      slots_available: slots_available,
-      items_available: items_available,
+      slots_available,
+      items_available,
       send_lock: sendLock,
       recv_lock: recvLock,
     } = this.internals;
@@ -329,8 +335,7 @@ export class Receiver<T> extends ChannelHandle<T> {
       if (result.ok) {
         yield result.value;
       } else {
-        const msg = result.error.message;
-        if (msg === ERR_CLOSED.message || msg === ERR_DISPOSED_RECEIVER.message) {
+        if (result.error === ERR_CLOSED || result.error === ERR_DISPOSED_RECEIVER) {
           return;
         }
         throw result.error;
@@ -358,14 +363,20 @@ export class Receiver<T> extends ChannelHandle<T> {
 
 export function channel<T>(
   capacity: number = 32,
+  /**
+   * @dev this is a byte budget for underlying SharedJsonBuffer
+   */
   options?: { size?: number },
 ): [Sender<T>, Receiver<T>] {
+  if (!Number.isInteger(capacity) || capacity < 1)
+    throw new Error("capacity must be an integer >= 1");
+
   const state = new Int32Array(new SharedArrayBuffer(META_SIZE * Int32Array.BYTES_PER_ELEMENT));
 
-  state[IDX_CAP] = capacity;
   state[IDX_HEAD] = 0;
   state[IDX_TAIL] = 0;
   state[IDX_CLOSED] = OPEN;
+  state[IDX_CAP] = capacity;
   state[IDX_TX_COUNT] = 1;
   state[IDX_RX_COUNT] = 1;
 

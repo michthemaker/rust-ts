@@ -134,6 +134,7 @@ interface Threads {
    * Overload 2: Raw Function (No Args)
    */
   spawn<T>(fn: (this: void) => T | Promise<T>): JoinHandle<T>;
+  sleep(ms: number): void;
 }
 
 const threads: Threads = {
@@ -155,6 +156,9 @@ const threads: Threads = {
     const handle = new JoinHandle(fn, args, caller);
 
     return handle;
+  },
+  sleep(ms) {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
   },
 };
 
