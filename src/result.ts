@@ -1,6 +1,6 @@
 import { Option } from "./option";
 
-export const HIDDEN_RESULT_TAG = "rust-ts::std::Result";
+export const HIDDEN_RESULT_TAG = "rust-ts::std::Result<T, E>";
 
 interface ResultMethods<T, E> {
   is_ok(): this is Ok<T, E>;

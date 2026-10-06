@@ -1,4 +1,4 @@
-export const HIDDEN_OPTION_TAG = "__INTERNAL_RUST_OPTION_BRAND_99x11__";
+export const HIDDEN_OPTION_TAG = "rust-ts::std::Option<T>";
 
 interface OptionMethods<T> {
   is_some(): this is Some<T>;
