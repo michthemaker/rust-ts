@@ -20,12 +20,20 @@ export interface None extends OptionMethods<unknown> {
 
 export type Option<T> = Some<T> | None;
 
+const DEBUG = Symbol.for("nodejs.util.inspect.custom");
+
 function createFrozenOption<T>(raw: any): Option<T> {
   const optionObj = {
     some: raw.some,
     ...(raw.some ? { value: raw.value } : {}),
     [HIDDEN_OPTION_TAG]: true,
-
+    [DEBUG](_depth: number, options: any, inspect: Function) {
+      if (this.is_some()) {
+        return `Some(${inspect(this.value, options)})`;
+      } else {
+        return "None";
+      }
+    },
     is_some() {
       return this.some;
     },

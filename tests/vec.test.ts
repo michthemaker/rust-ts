@@ -47,6 +47,7 @@ describe("Vec<T>", () => {
   test(".get call returns an Option<T>", () => {
     const my_nums = Vec.with_capacity<string>(5);
     expect(my_nums.get(0).is_none()).toEqual(true);
+    console.log(my_nums.get(0));
   });
   test(".reserve throws on invalid `additional` argument", () => {
     function throws() {

@@ -2,13 +2,13 @@ import { Option } from "./option";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295; // 2^32 - 1
 
-const DEBUG_TRAIT = Symbol.for("nodejs.util.inspect.custom");
+const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 
 class FixedArrayConstructorImpl<T, N extends number> {
   private buffer: T[];
   private size: N;
 
-  [DEBUG_TRAIT](_depth: number, options: any, inspect: Function) {
+  [DEBUG](_depth: number, options: any, inspect: Function) {
     const formatted_elements = this.buffer.map((item) => inspect(item, options));
 
     return `FixedArray(${this.size})[${formatted_elements.join(", ")}]`;
@@ -90,7 +90,7 @@ class VecConstructorImpl<T> {
   private _len: number = 0;
 
   // Node.js/Deno/Bun pass standard formatting tools right into your hook
-  [DEBUG_TRAIT](_depth: number, options: any, inspect: Function) {
+  [DEBUG](_depth: number, options: any, inspect: Function) {
     const first_half = this.buffer.slice(0, this._len);
     const uninits = this._capacity - this._len;
 
