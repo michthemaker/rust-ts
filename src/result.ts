@@ -24,12 +24,21 @@ export interface Err<T, E> extends ResultMethods<T, E> {
 
 export type Result<T, E> = Ok<T, E> | Err<T, E>;
 
+const DEBUG = Symbol.for("nodejs.util.inspect.custom");
+
 function createFrozenResult<T, E>(raw: any): Result<T, E> {
   const resultObj = {
     ok: raw.ok,
     ...(raw.ok ? { value: raw.value } : { error: raw.error }),
     // @ts-ignore
     [HIDDEN_RESULT_TAG]: true,
+    [DEBUG](_depth: number, options: any, inspect: Function) {
+      if (this.is_ok()) {
+        return `Ok(${inspect(this.value, options)})`;
+      } else {
+        return `Err(${inspect(this.error, options)})`;
+      }
+    },
     is_ok(): this is Ok<T, E> {
       return this.ok;
     },

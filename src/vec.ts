@@ -89,22 +89,18 @@ class VecConstructorImpl<T> {
   private _capacity: number;
   private _len: number = 0;
 
-  // Node.js/Deno/Bun pass standard formatting tools right into your hook
   [DEBUG](_depth: number, options: any, inspect: Function) {
     const first_half = this.buffer.slice(0, this._len);
     const uninits = this._capacity - this._len;
 
-    // 1. Let the system naturally inspect every custom class instance/value inside your active bounds
     const formatted_elements = first_half.map((item) => inspect(item, options));
 
-    // 2. Format your uninitialized memory markers cleanly as raw, unquoted text strings
     if (uninits >= 2) {
       formatted_elements.push(`${uninits}x Uninit`);
     } else if (uninits === 1) {
       formatted_elements.push("Uninit");
     }
 
-    // 3. Join the elements with standard array spacing constraints
     return `Vec[${formatted_elements.join(", ")}]`;
   }
 

@@ -10,13 +10,10 @@ interface OptionMethods<T> {
 }
 
 export interface Some<T> extends OptionMethods<T> {
-  readonly some: true;
   readonly value: T;
 }
 
-export interface None extends OptionMethods<unknown> {
-  readonly some: false;
-}
+export interface None extends OptionMethods<unknown> {}
 
 export type Option<T> = Some<T> | None;
 

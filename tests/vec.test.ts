@@ -45,8 +45,8 @@ describe("Vec<T>", () => {
     expect(my_nums.capacity()).toBe(5);
   });
   test(".get call returns an Option<T>", () => {
-    const my_nums = Vec.with_capacity<string>(5);
-    expect(my_nums.get(0).is_none()).toEqual(true);
+    const my_nums = vec([new OnceLock(), 5]);
+    expect(my_nums.get(0).is_some()).toEqual(true);
     console.log(my_nums.get(0));
   });
   test(".reserve throws on invalid `additional` argument", () => {
