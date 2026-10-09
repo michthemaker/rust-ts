@@ -1,4 +1,4 @@
-import { describe, test, expect, xdescribe } from "bun:test";
+import { describe, test, expect } from "bun:test";
 import { Result } from "../src/result";
 import { Option } from "../src/option";
 
