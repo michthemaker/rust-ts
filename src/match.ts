@@ -15,112 +15,117 @@ Object.defineProperty(Symbol.prototype, "metadata", {
   configurable: true,
 });
 
-const SYMBOL_WILDCARD = Symbol("Wildcard");
+export type Pat<Kind extends string> = symbol & {
+  readonly __kind: Kind;
+};
 
-const Pattern = {
-  Some<T>(val: T) {
-    const sym = Symbol(`SomeLiteral`);
-    // @ts-ignore
-    sym.metadata = {
-      value: Option.Some(val),
-    };
-    return sym;
-  },
-  Err<E>(val: E) {
-    const sym = Symbol(`ErrLiteral`);
-    // @ts-ignore
-    sym.metadata = {
-      value: Result.Err(val),
-    };
-    return sym;
-  },
-  Ok<T>(val: T) {
-    const sym = Symbol(`OkLiteral`);
-    // @ts-ignore
-    sym.metadata = {
-      value: Result.Ok(val),
-    };
-    return sym;
-  },
-  Val<T>(val: T) {
-    const sym = Symbol(`ValLiteral`);
-    // @ts-ignore
-    sym.metadata = {
-      type: "Val",
-      value: val,
-    };
-    return sym;
+const SYMBOL_WILDCARD = Symbol("Wildcard") as unknown as Pat<"rust-ts::std::match::Wildcard">;
+
+// kind name -> tuple of args the arm receives, or never if the kind doesn't apply to T
+export interface PatternKinds<T> {
+  "rust-ts::std::match::Val<T>": [];
+}
+
+export interface PatternInterface {
+  _: typeof SYMBOL_WILDCARD;
+  Val<T>(expected: T): Pat<"rust-ts::std::match::Val<T>">;
+  Some<T>(expected: T): Pat<"rust-ts::std::Some<T>">;
+  Ok<T>(expected: T): Pat<"rust-ts::std::Ok<T, E>">;
+  Err<T>(expected: T): Pat<"rust-ts::std::Err<T, E>">;
+}
+
+type Validator = (subject: unknown) => Option<unknown[]>;
+
+export function define_pattern<K extends string>(label: K, validate: Validator): Pat<K> {
+  const sym = Symbol(label);
+  // @ts-ignore
+  sym.metadata = { validate };
+  return sym as any;
+}
+
+// @ts-ignore
+const Pattern: PatternInterface = {
+  Val(val) {
+    return define_pattern("rust-ts::std::match::Val<T>", (s) =>
+      is_equal(val, s) ? Option.Some([]) : Option.None(),
+    );
   },
   _: SYMBOL_WILDCARD,
+  Some(val) {
+    return define_pattern("rust-ts::std::Some<T>", (s) =>
+      Option.is_option(s) && s.is_some() && is_equal(val, s.value)
+        ? Option.Some([s.value])
+        : Option.None(),
+    );
+  },
+  Ok(val) {
+    return define_pattern("rust-ts::std::Ok<T, E>", (s) =>
+      Result.is_result(s) && s.is_ok() && is_equal(val, s.value)
+        ? Option.Some([s.value])
+        : Option.None(),
+    );
+  },
+  Err(val) {
+    return define_pattern("rust-ts::std::Err<T, E>", (s) =>
+      Result.is_result(s) && s.is_err() && is_equal(val, s.error)
+        ? Option.Some([s.error])
+        : Option.None(),
+    );
+  },
 };
 
-type ResultVariants<T, E, U> = {
+type ResultArms<T, E, U> = {
   Ok: (val: T) => U;
   Err: (err: E) => U;
-  [pattern: symbol]: (val: T) => U;
+} & {
+  [K in Pat<"rust-ts::std::Ok<T, E>">]: (v: T) => U;
+} & {
+  [K in Pat<"rust-ts::std::Err<T, E>">]: (e: E) => U;
+} & {
+  [K in typeof SYMBOL_WILDCARD]: () => U;
 };
 
-type OptionVariants<T, U> = {
+type OptionArms<T, U> = {
   Some: (val: T) => U;
   None: () => U;
-  [pattern: symbol]: (val: T) => U;
+} & {
+  [K in Pat<"rust-ts::std::Some<T>">]: (v: T) => U;
+} & {
+  [K in typeof SYMBOL_WILDCARD]: () => U;
 };
 
-type LiteralVariants<T, U> = {
-  [K in string | number | symbol]: K extends symbol ? (val: T) => U : () => U;
-};
+type Loose = { [k: symbol & { readonly __loose: true }]: any };
 
-function match<T, E, U>(value: Result<T, E>, match_expr: ResultVariants<T, E, U>): U;
+type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void
+  ? I
+  : never;
 
-function match<T, U>(value: Option<T>, match_expr: OptionVariants<T, U>): U;
+type PatternArms<T, U> = UnionToIntersection<
+  {
+    [K in keyof PatternKinds<T>]: [PatternKinds<T>[K]] extends [never]
+      ? never
+      : { [P in Pat<K & string>]: (...args: Extract<PatternKinds<T>[K], unknown[]>) => U };
+  }[keyof PatternKinds<T>]
+> & { [K in typeof SYMBOL_WILDCARD]: () => U };
 
-function match<T, U>(value: T, match_expr: LiteralVariants<T, U>): U;
+function match<T, E, U>(value: Result<T, E>, match_expr: ResultArms<T, E, U> | Loose): U;
+
+function match<T, U>(value: Option<T>, match_expr: OptionArms<T, U> | Loose): U;
+
+function match<T, U>(value: T, match_expr: PatternArms<T, U> | Loose): U;
 
 function match(value: any, config: any) {
   // handle [Pattern.*]
-  for (const symbol_key of Object.getOwnPropertySymbols(config)) {
-    if (symbol_key === SYMBOL_WILDCARD) continue;
-    const metadata = (symbol_key as any).metadata;
-    if (!metadata) continue;
-
-    if (metadata.type === "Val") {
-      if (is_equal(metadata.value, value)) {
-        return config[symbol_key](value);
-      }
-    }
-
-    const hidden_symbol_value = metadata.value;
-    // handle Result.Ok or Result.Err
-    if (Result.is_result(hidden_symbol_value) && Result.is_result(value))
-      // if the hidden value and the value are of same variant and have same value return this branch
-      if (
-        hidden_symbol_value.is_ok() &&
-        value.is_ok() &&
-        is_equal(hidden_symbol_value.value, value.value)
-      ) {
-        return config[symbol_key](value.value);
-      } else if (
-        hidden_symbol_value.is_err() &&
-        value.is_err() &&
-        is_equal(hidden_symbol_value.error, value.error)
-      )
-        return config[symbol_key](value.error);
-
-    // handle Option.Some
-    if (Option.is_option(hidden_symbol_value) && Option.is_option(value)) {
-      // if the hidden value and the value are of same variant and have same value return this branch
-      if (
-        hidden_symbol_value.is_some() &&
-        value.is_some() &&
-        is_equal(hidden_symbol_value.value, value.value)
-      )
-        return config[symbol_key](value.value);
-    }
+  for (const key of Object.getOwnPropertySymbols(config)) {
+    if (key === (SYMBOL_WILDCARD as symbol)) continue;
+    const validate = (key as any).metadata?.validate;
+    if (!validate) continue;
+    const result = validate(value);
+    if (result.is_some()) return config[key](...result.unwrap());
   }
-
   // handle Result.Ok or Result.Err
   if (Result.is_result(value)) {
-    const { Ok, Err } = config as ResultVariants<unknown, unknown, unknown>;
+    const { Ok, Err } = config as ResultArms<unknown, unknown, unknown>;
 
     // Explicit exhaustive match rules validation
     if (value.is_ok()) {
@@ -140,7 +145,7 @@ function match(value: any, config: any) {
 
   // handle Option.Some or Option.None
   else if (Option.is_option(value)) {
-    const { Some, None } = config as OptionVariants<unknown, unknown>;
+    const { Some, None } = config as OptionArms<unknown, unknown>;
 
     if (value.is_some()) {
       if (typeof Some === "function") return Some(value.value);
@@ -154,15 +159,12 @@ function match(value: any, config: any) {
     if (Option.is_none(None)) throw new Error(`non-exhaustive patterns: \`None()\` not covered`);
   }
 
-  // handles the value itself and the wildcard
-  if (Option.is_some(value)) {
-    if (config[value] !== undefined) return config[value]();
-    if (config[SYMBOL_WILDCARD] !== undefined) return config[SYMBOL_WILDCARD]();
-  }
-
-  throw new Error(
-    `non-exhaustive patterns: \`[Pattern._]\` not covered\ntip: add \`[Pattern._]() {}\``,
-  );
+  // Handles the wildcard last else throws an error
+  if (config[SYMBOL_WILDCARD] !== undefined) return config[SYMBOL_WILDCARD]();
+  else
+    throw new Error(
+      `non-exhaustive patterns: \`[Pattern._]\` not covered\ntip: add \`[Pattern._]() {}\``,
+    );
 }
 
-export { match, Pattern };
+export { match, Pattern, Pattern as P };
