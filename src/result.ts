@@ -70,10 +70,10 @@ function createFrozenResult<T, E>(raw: any): Result<T, E> {
 }
 
 export const Result = {
-  Ok<T, E = any>(value: T): Result<T, E> {
+  Ok<T = any, E = any>(value: T): Result<T, E> {
     return createFrozenResult({ ok: true, value });
   },
-  Err<T, E = any>(error: E): Result<T, E> {
+  Err<T = any, E = any>(error: E): Result<T, E> {
     return createFrozenResult({ ok: false, error });
   },
   from<T, E>(value: Result<T, E>) {

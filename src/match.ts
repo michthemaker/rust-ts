@@ -1,6 +1,7 @@
 import { is_equal } from "../lib/is_equal";
 import { Option } from "./option";
 import { Result } from "./result";
+import { Vec } from "./vec";
 
 const SECRETE_METADATA_REGISTRY = new WeakMap();
 
@@ -15,66 +16,92 @@ Object.defineProperty(Symbol.prototype, "metadata", {
   configurable: true,
 });
 
-const SYMBOL_WILDCARD = Symbol("Wildcard");
+type Pat<Kind extends string> = symbol & {
+  readonly __kind: Kind;
+};
 
-const Pattern = {
-  Some<T>(val: T) {
+const SYMBOL_WILDCARD = Symbol("Wildcard") as unknown as Pat<"rust-ts::std::match::Wildcard">;
+
+interface PatternInterface {
+  Some<T>(val: T): Pat<"rust-ts::std::Some<T>">;
+  Err<E>(val: E): Pat<"rust-ts::std::Err<T, E>">;
+  Ok<T>(val: T): Pat<"rust-ts::std::Ok<T, E>">;
+  Val<T>(val: T): Pat<"rust-ts::std::match::Val<T>">;
+  Vec<T>(val: T): Pat<"rust-ts::std::Vec<T>">;
+  _: Pat<"rust-ts::std::match::Wildcard">;
+}
+
+// @ts-ignore
+const Pattern: PatternInterface = {
+  Some(val) {
     const sym = Symbol(`SomeLiteral`);
     // @ts-ignore
     sym.metadata = {
       value: Option.Some(val),
     };
-    return sym;
+    return sym as any;
   },
-  Err<E>(val: E) {
+  Err(val) {
     const sym = Symbol(`ErrLiteral`);
     // @ts-ignore
     sym.metadata = {
       value: Result.Err(val),
     };
-    return sym;
+    return sym as any;
   },
-  Ok<T>(val: T) {
+  Ok(val) {
     const sym = Symbol(`OkLiteral`);
     // @ts-ignore
     sym.metadata = {
       value: Result.Ok(val),
     };
-    return sym;
+    return sym as any;
   },
-  Val<T>(val: T) {
+  Val(val) {
     const sym = Symbol(`ValLiteral`);
     // @ts-ignore
     sym.metadata = {
       type: "Val",
       value: val,
     };
-    return sym;
+    return sym as any;
   },
   _: SYMBOL_WILDCARD,
 };
 
-type ResultVariants<T, E, U> = {
+type ResultArms<T, E, U> = {
   Ok: (val: T) => U;
   Err: (err: E) => U;
-  [pattern: symbol]: (val: T) => U;
+} & {
+  [K in Pat<"rust-ts::std::Ok<T, E>">]: (v: T) => U;
+} & {
+  [K in Pat<"rust-ts::std::Err<T, E>">]: (e: E) => U;
+} & {
+  [K in typeof SYMBOL_WILDCARD]: () => U;
 };
 
-type OptionVariants<T, U> = {
+type OptionArms<T, U> = {
   Some: (val: T) => U;
   None: () => U;
-  [pattern: symbol]: (val: T) => U;
+} & {
+  [K in Pat<"rust-ts::std::Some<T>">]: (v: T) => U;
+} & {
+  [K in typeof SYMBOL_WILDCARD]: () => U;
 };
 
-type LiteralVariants<T, U> = {
-  [K in string | number | symbol]: K extends symbol ? (val: T) => U : () => U;
+type LiteralArms<T, U> = {
+  [K in Pat<"rust-ts::std::match::Val<T>">]: () => U;
+} & {
+  [K in Pat<"rust-ts::std::Vec<T>">]: (v: T extends Vec<infer X> ? X[] : never) => U;
+} & {
+  [K in typeof SYMBOL_WILDCARD]: () => U;
 };
 
-function match<T, E, U>(value: Result<T, E>, match_expr: ResultVariants<T, E, U>): U;
+type Loose = { [k: symbol & { readonly __loose: true }]: any };
 
-function match<T, U>(value: Option<T>, match_expr: OptionVariants<T, U>): U;
-
-function match<T, U>(value: T, match_expr: LiteralVariants<T, U>): U;
+function match<T, E, U>(value: Result<T, E>, match_expr: ResultArms<T, E, U> | Loose): U;
+function match<T, U>(value: Option<T>, match_expr: OptionArms<T, U> | Loose): U;
+function match<T, U>(value: T, match_expr: LiteralArms<T, U> | Loose): U;
 
 function match(value: any, config: any) {
   // handle [Pattern.*]
@@ -120,7 +147,7 @@ function match(value: any, config: any) {
 
   // handle Result.Ok or Result.Err
   if (Result.is_result(value)) {
-    const { Ok, Err } = config as ResultVariants<unknown, unknown, unknown>;
+    const { Ok, Err } = config as ResultArms<unknown, unknown, unknown>;
 
     // Explicit exhaustive match rules validation
     if (value.is_ok()) {
@@ -140,7 +167,7 @@ function match(value: any, config: any) {
 
   // handle Option.Some or Option.None
   else if (Option.is_option(value)) {
-    const { Some, None } = config as OptionVariants<unknown, unknown>;
+    const { Some, None } = config as OptionArms<unknown, unknown>;
 
     if (value.is_some()) {
       if (typeof Some === "function") return Some(value.value);
@@ -165,4 +192,4 @@ function match(value: any, config: any) {
   );
 }
 
-export { match, Pattern };
+export { match, Pattern, type PatternInterface };

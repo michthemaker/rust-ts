@@ -1,4 +1,6 @@
 import { Option } from "./option";
+import { Pattern } from "./match";
+import { is_equal } from "../lib/is_equal";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295; // 2^32 - 1
 
@@ -297,32 +299,21 @@ const vec = function vec<T>(arr: Array<T>): Vec<T> {
   return Vec.from(arr);
 };
 
-// export type VecLiteral = symbol & {
-//   __brand: "VecLiteral";
-// };
-//
-// export type Patterns = {
-//   [K in VecLiteral]: 1;
-// };
-//
-// function vec() {
-//   return Symbol("Vec") as VecLiteral;
-// }
-//
-// function some() {
-//   return Symbol("SomeLiteral") as SomeLiteral;
-// }
-//
-// declare module '../src/vec.ts' {
-// 	export type Patterns = {
-// 		[K in SomeLiteral]: 3
-// 	}
-// }
-//
-// const me: Patterns = {
-//   [vec()]: 1,
-// };
-//
-// me;
+(Pattern as any).Vec = function <T>(expected: T[]): symbol {
+  const sym = Symbol("VecLiteral") as any;
+  sym.metadata = {
+    type: "Vec",
+    validate(runtimeValue: any) {
+      if (runtimeValue && typeof runtimeValue.to_array === "function") {
+        const current_array = runtimeValue.to_array();
+        if (is_equal(current_array, expected)) {
+          return { matched: true, extracted: current_array };
+        }
+      }
+      return { matched: false };
+    },
+  };
+  return sym;
+};
 
 export { FixedArray, Vec, vec };
