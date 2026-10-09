@@ -1,7 +1,7 @@
-import { match, Pattern } from "./src/match";
+import { match, P } from "./src/match";
 import { Option } from "./src/option";
 import { Result } from "./src/result";
-import { vec } from "./src/vec";
+import { FixedArray } from "./src/vec";
 //
 // const my_val = "None";
 //
@@ -16,7 +16,7 @@ import { vec } from "./src/vec";
 // });
 //
 // match(2, {
-//   [Pattern._]() {
+//   [P._]() {
 //     console.log("exhausted it");
 //   },
 //   2() {},
@@ -25,7 +25,7 @@ import { vec } from "./src/vec";
 // const my_option = Option.Some(5);
 //
 // match(my_option, {
-//   [Pattern.Some(5)](v) {},
+//   [P.Some(5)](v) {},
 //   Some() {},
 //   None() {},
 // });
@@ -34,7 +34,7 @@ import { vec } from "./src/vec";
 // const option_1 = Option.Some(fixed_date);
 //
 // match(option_1, {
-//   [Pattern.Some(new Date(fixed_date))](date) {
+//   [P.Some(new Date(fixed_date))](date) {
 //     console.log(date, "I am the same date");
 //   },
 //   Some() {
@@ -48,10 +48,10 @@ import { vec } from "./src/vec";
 // const my_object = { name: "John" };
 //
 // match(my_object, {
-//   [Pattern.Val({ name: "Logia" })](v) {
+//   [P.Val({ name: "Logia" })](v) {
 //     console.log(v);
 //   },
-//   [Pattern.Val({ name: "John" })](v) {
+//   [P.Val({ name: "John" })](v) {
 //     console.log(v);
 //   },
 // });
@@ -59,38 +59,35 @@ import { vec } from "./src/vec";
 // const my_vec = vec([9, 5]);
 
 match(Option.Some(5), {
-  [Pattern.Some("sja")](v) {
+  [P.Some("sja")](v) {
     console.log(v);
   },
   Some(val) {
     console.log(val);
   },
-  [Pattern._]() {},
+  [P._]() {},
 });
 
 const res = Result.Err("names" as const);
 
 match(res, {
-  [Pattern.Err("name")](v) {
+  [P.Err("name")](v) {
     console.log(v);
   },
-  [Pattern.Err("john")](v) {
+  [P.Err("john")](v) {
     console.log(v);
   },
   Err(e) {
     console.log(e);
   },
-  [Pattern._]() {},
+  [P._]() {},
 });
 
-const my_numbers = vec([5, 7, 9, 2]);
+const my_names = new FixedArray("John", 2);
 
-match(my_numbers, {
-  [Pattern.Val(9)]() {
-    console.log(9);
+match(my_names, {
+  [P.FixedArray(["John"])](e) {
+    console.log(e);
   },
-  [Pattern.Vec([5, 7, 9, 2])](arr) {
-    arr;
-  },
-  [Pattern._]() {},
+  [P._]() {},
 });

@@ -1,5 +1,5 @@
 import { Option } from "./option";
-import { Pattern } from "./match";
+import { define_pattern, Pattern } from "./match";
 import { is_equal } from "../lib/is_equal";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295; // 2^32 - 1
@@ -66,6 +66,10 @@ class FixedArrayConstructorImpl<T, N extends number> {
 
   public len(): number {
     return this.size;
+  }
+
+  public to_array() {
+    return this.buffer.slice(0, this.size);
   }
 }
 
@@ -299,21 +303,35 @@ const vec = function vec<T>(arr: Array<T>): Vec<T> {
   return Vec.from(arr);
 };
 
-(Pattern as any).Vec = function <T>(expected: T[]): symbol {
-  const sym = Symbol("VecLiteral") as any;
-  sym.metadata = {
-    type: "Vec",
-    validate(runtimeValue: any) {
-      if (runtimeValue && typeof runtimeValue.to_array === "function") {
-        const current_array = runtimeValue.to_array();
-        if (is_equal(current_array, expected)) {
-          return { matched: true, extracted: current_array };
-        }
-      }
-      return { matched: false };
-    },
-  };
-  return sym;
+declare module "./match" {
+  interface PatternKinds<T> {
+    "rust-ts::std::Vec<T>": T extends Vec<infer X> ? [X[]] : never;
+    "rust-ts::std::FixedArray<T, N>": [T];
+  }
+  interface PatternInterface {
+    Vec<T>(expected: T[]): Pat<"rust-ts::std::Vec<T>">;
+    FixedArray<T>(expected: T[]): Pat<"rust-ts::std::FixedArray<T, N>">;
+  }
+}
+
+Pattern.Vec = function (expected) {
+  return define_pattern("rust-ts::std::Vec<T>", (subject: any) => {
+    if (subject && subject instanceof VecConstructorImpl) {
+      const current = subject.to_array();
+      if (is_equal(current, expected)) return Option.Some([current]);
+    }
+    return Option.None();
+  });
+};
+
+Pattern.FixedArray = function (expected) {
+  return define_pattern("rust-ts::std::FixedArray<T, N>", (subject: any) => {
+    if (subject && subject instanceof FixedArrayConstructorImpl) {
+      const current = subject.to_array();
+      if (is_equal(current, expected)) return Option.Some([subject]);
+    }
+    return Option.None();
+  });
 };
 
 export { FixedArray, Vec, vec };
