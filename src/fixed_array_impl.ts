@@ -1,6 +1,8 @@
+import { clone_of } from "../lib/clone";
 import { Option } from "./option";
 import { range } from "./range";
 import { Slice } from "./slice";
+import { vec } from "./vec";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295;
 const DEBUG = Symbol.for("nodejs.util.inspect.custom");
@@ -75,11 +77,25 @@ export class FixedArray<T, N extends number> extends Slice<T> {
     return this.buf.slice(0, this._len);
   }
 
+  public to_vec() {
+    // a slice is created internally
+    return vec(this.buf);
+  }
+
+  public clone() {
+    const copy = new FixedArray<T, N>(undefined as T, this._len as N);
+    for (let i of range(0, this._len)) {
+      const item = this.buf[i];
+      copy[i] = clone_of(item);
+    }
+    return copy;
+  }
+
   // array only transform
   public map<U>(f: MapTransformFn<T, U>) {
     const new_fixed = new FixedArray<U, N>(undefined as U, this._len as N);
-    for (let index of range(0, this._len)) {
-      new_fixed[index] = f(this.safe_get(index).expect(`Failed to get at index ${index}`), index);
+    for (let i of range(0, this._len)) {
+      new_fixed[i] = f(this.buf[i], i);
     }
     return new_fixed;
   }

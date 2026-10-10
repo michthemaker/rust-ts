@@ -68,6 +68,10 @@ export class Slice<T> {
     return new Slice(this.buf, this.start + from, to - from);
   }
 
+  public as_slice() {
+    return new Slice(this.buf, 0, this._len);
+  }
+
   // ------------------------------------------------------------- basic info
 
   public len(): number {

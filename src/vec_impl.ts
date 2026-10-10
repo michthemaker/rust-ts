@@ -1,4 +1,6 @@
+import { clone_of } from "../lib/clone";
 import { Option } from "./option";
+import { range } from "./range";
 import { Slice } from "./slice";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295; // 2^32 - 1
@@ -72,12 +74,17 @@ export class Vec<T> extends Slice<T> {
     return new this<T>(0);
   }
 
-  public as_slice() {
-    return new Slice(this.buf, 0, this._len);
-  }
-
   public to_array() {
     return this.buf.slice(0, this._len) as T[];
+  }
+
+  public clone() {
+    const copy = Vec.with_capacity<T>(this._capacity);
+    for (let i of range(0, this._len)) {
+      const item = this.buf[i];
+      copy[i] = clone_of(item);
+    }
+    return copy;
   }
 
   /**
