@@ -15,6 +15,7 @@ type FixedArray<T, N extends number> = TupleToIndices<FixedIndices<T, N>> & Impl
 
 interface FixedArrayConstructor {
   new <T, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
+  from_fn<T, N extends number>(N: N, f: (index: number) => T): FixedArray<T, N>;
 }
 
 const FixedArray = Impl as unknown as FixedArrayConstructor;

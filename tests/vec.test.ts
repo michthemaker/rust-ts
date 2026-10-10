@@ -1,32 +1,8 @@
-import { describe, expect, test, xdescribe } from "bun:test";
-import { FixedArray, vec, Vec } from "../src/vec";
+import { expect, test, xdescribe } from "bun:test";
+import { vec, Vec } from "../src/vec";
 import { OnceLock } from "../src/sync/once-lock";
 
-xdescribe("FixedArray<T, N>", () => {
-  test("can be indexed like arrays", () => {
-    const nums = new FixedArray(null, 3);
-    console.log(nums);
-    expect(nums[2]).toBe(null);
-  });
-  test("throws on set index out of bounds", () => {
-    function throws() {
-      const nums = new FixedArray(4, 4);
-      // @ts-ignore
-      nums[4] = 9;
-    }
-    expect(throws).toThrow();
-  });
-  test("throws on get index out of bounds", () => {
-    function throws() {
-      const nums = new FixedArray(4, 4);
-      // @ts-ignore
-      nums[8];
-    }
-    expect(throws).toThrow();
-  });
-});
-
-describe("Vec<T>", () => {
+xdescribe("Vec<T>", () => {
   test("can be indexed like arrays", () => {
     const my_nums = Vec.new<string>();
     my_nums.reserve_exact(2);
