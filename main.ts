@@ -2,9 +2,6 @@ import { FixedArray } from "./src/fixed_array";
 import { match, P } from "./src/match";
 import { Option } from "./src/option";
 import { Result } from "./src/result";
-import { vec } from "./src/vec";
-
-const my_numss = vec([0, 9, 9]);
 
 match(Option.Some(5), {
   [P.Some("sja")](v) {

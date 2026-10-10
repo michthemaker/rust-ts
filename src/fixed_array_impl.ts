@@ -74,4 +74,15 @@ export class FixedArray<T, N extends number> extends Slice<T> {
   public to_array() {
     return this.buf.slice(0, this._len);
   }
+
+  // array only transform
+  public map<U>(f: MapTransformFn<T, U>) {
+    const new_fixed = new FixedArray<U, N>(undefined as U, this._len as N);
+    for (let index of range(0, this._len)) {
+      new_fixed[index] = f(this.safe_get(index).expect(`Failed to get at index ${index}`), index);
+    }
+    return new_fixed;
+  }
 }
+
+type MapTransformFn<T, U> = (v: T, index: number) => U;
