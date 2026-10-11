@@ -13,9 +13,9 @@ export interface Some<T> extends OptionMethods<T> {
   readonly value: T;
 }
 
-export interface None extends OptionMethods<unknown> {}
+export interface None<T = unknown> extends OptionMethods<T> {}
 
-export type Option<T> = Some<T> | None;
+export type Option<T> = Some<T> | None<T>;
 
 const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 
