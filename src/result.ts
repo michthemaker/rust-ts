@@ -1,4 +1,3 @@
-import { is_equal } from "../lib/is_equal";
 import { Option } from "./option";
 
 export const HIDDEN_RESULT_TAG = "rust-ts::std::Result<T, E>";
