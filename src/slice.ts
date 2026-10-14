@@ -130,7 +130,7 @@ export class Slice<T> {
     for (let i = 0; i < this._len; i++) yield this.buf[this.start + i];
   }
 
-  [Symbol.iterator](): IterableIterator<T> {
+  public [Symbol.iterator](): IterableIterator<T> {
     return this.iter();
   }
 
