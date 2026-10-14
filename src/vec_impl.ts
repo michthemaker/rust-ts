@@ -44,7 +44,7 @@ export class Vec<T> extends Slice<T> {
             return target
               .get(index)
               .expect(
-                `index out of bounds: capacity is ${this_value._capacity} but the index is ${index}`,
+                `index out of bounds: length is ${this_value._len} but the index is ${index}`,
               );
           }
         }
