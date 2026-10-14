@@ -6,6 +6,7 @@ import { Slice } from "./slice";
 const MAX_ARRAY_LENGTH = 4_294_967_295; // 2^32 - 1
 
 const DEBUG = Symbol.for("nodejs.util.inspect.custom");
+const INDEX = /^(0|[1-9]\d*)$/;
 
 export class Vec<T> extends Slice<T> {
   private _capacity: number;
@@ -37,24 +38,25 @@ export class Vec<T> extends Slice<T> {
 
     return new Proxy(this_value, {
       get(target, prop) {
-        // 1. If looking up an array index (numeric string or number)
-        const index = Number(prop);
-        if (!Number.isNaN(index) && Number.isInteger(index)) {
-          return target
-            .get(index)
-            .expect(
-              `index out of bounds: capacity is ${this_value._capacity} but the index is ${index}`,
-            );
+        if (typeof prop === "string" && INDEX.test(prop)) {
+          const index = Number(prop);
+          if (!Number.isNaN(index) && Number.isInteger(index)) {
+            return target
+              .get(index)
+              .expect(
+                `index out of bounds: capacity is ${this_value._capacity} but the index is ${index}`,
+              );
+          }
         }
-
-        // 2. Delegate to standard class methods (e.g., .len())
         const value = Reflect.get(target, prop);
         return typeof value === "function" ? value.bind(target) : value;
       },
       set(target, prop, value): boolean {
-        const index = Number(prop);
-        if (!Number.isNaN(index) && Number.isInteger(index)) {
-          target.insert(index, value);
+        if (typeof prop === "string" && INDEX.test(prop)) {
+          const index = Number(prop);
+          // update path, think about setting a far index, this fails
+          if (index in target.buf) target.buf[target.start + index] = value;
+          else target.insert(index, value);
           return true;
         }
         return Reflect.set(target, prop, value);
