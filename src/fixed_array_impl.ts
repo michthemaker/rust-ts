@@ -1,11 +1,15 @@
 import { clone_of } from "../lib/clone";
-import { Option } from "./option";
 import { range } from "./range";
 import { Slice } from "./slice";
 import { vec } from "./vec";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295;
+const INDEX = /^(0|[1-9]\d*)$/;
 const DEBUG = Symbol.for("nodejs.util.inspect.custom");
+
+function panic(msg: string): never {
+  throw new Error(msg);
+}
 
 export class FixedArray<T, N extends number> extends Slice<T> {
   [DEBUG](_depth: number, options: any, inspect: Function) {
@@ -24,27 +28,26 @@ export class FixedArray<T, N extends number> extends Slice<T> {
 
     return new Proxy(this_value, {
       get(target, prop) {
-        // 1. If looking up an array index (numeric string or number)
-        const index = Number(prop);
-        if (!Number.isNaN(index) && Number.isInteger(index)) {
-          return target
-            .safe_get(index)
-            .expect(`index out of bounds: length is ${this_value._len} but the index is ${index}`);
+        if (typeof prop === "string" && INDEX.test(prop)) {
+          const index = Number(prop);
+          if (index >= target._len)
+            panic(`index out of bounds: the len is ${target._len} but the index is ${index}`);
+          return target.buf[target.start + index];
         }
-
-        // 2. Delegate to standard class methods (e.g., .len())
         const value = Reflect.get(target, prop);
         return typeof value === "function" ? value.bind(target) : value;
       },
       set(target, prop, value): boolean {
-        const index = Number(prop);
-        if (!Number.isNaN(index) && Number.isInteger(index)) {
-          target.safe_set(index, value);
+        if (typeof prop === "string" && INDEX.test(prop)) {
+          const index = Number(prop);
+          if (index >= target._len)
+            panic(`index out of bounds: the len is ${target._len} but the index is ${index}`);
+          target.buf[target.start + index] = value;
           return true;
         }
         return Reflect.set(target, prop, value);
       },
-    }) as any; // Cast to pretend it is a raw tuple alongside our class helper
+    }) as any;
   }
 
   public static from_fn<T, N extends number>(N: N, f: (index: number) => T) {
@@ -53,20 +56,6 @@ export class FixedArray<T, N extends number> extends Slice<T> {
       fixed[index] = f(index);
     }
     return fixed;
-  }
-
-  private safe_get(index: number): Option<T> {
-    if (index < 0 || index >= this._len) {
-      return Option.None(); // Safe out-of-bounds protection
-    }
-    return Option.Some(this.buf[index]);
-  }
-
-  private safe_set(index: number, value: T): void {
-    if (index < 0 || index >= this._len) {
-      throw new Error(`index out of bounds: length is ${this._len} but the index is ${index}`);
-    }
-    this.buf[index] = value;
   }
 
   public len(): N {

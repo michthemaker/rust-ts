@@ -279,17 +279,17 @@ describe("Slice<T>", () => {
       expect([...make([0, 1, 2, 3, 4], 1, 3)]).toEqual([1, 2, 3]);
     });
 
-		test("windows / chunks / chunks_exact counts", () => {
-			const s = make([1, 2, 3, 4, 5, 6, 7]);
-			for (let win of s.windows(4)) {
-      	console.log(win)
-			}
+    test("windows / chunks / chunks_exact counts", () => {
+      const s = make([1, 2, 3, 4, 5, 6, 7]);
+      for (let win of s.windows(4)) {
+        console.log(win);
+      }
       expect([...s.windows(3)].length).toBe(5);
-			const chunks = [...s.chunks(3)].map((c) => c.to_array());
-			console.log('chunks')
-			for (let chunk of s.chunks(3)) {
-      	console.log(chunk)
-			}
+      const chunks = [...s.chunks(3)].map((c) => c.to_array());
+      console.log("chunks");
+      for (let chunk of s.chunks(3)) {
+        console.log(chunk);
+      }
       expect(chunks).toEqual([[1, 2, 3], [4, 5, 6], [7]]); // trailing partial chunk
       const exact = [...s.chunks_exact(3)].map((c) => c.to_array());
       expect(exact).toEqual([
@@ -622,11 +622,11 @@ describe("Slice<T>", () => {
     });
 
     test("len and to_array reflect the vec size", () => {
-      const strings = vec(['x', 'x', 'x', 'x']);
+      const strings = vec(["x", "x", "x", "x"]);
       expect(strings.len()).toBe(4);
       expect(strings.to_array()).toEqual(["x", "x", "x", "x"]);
-			strings[2] = "y";
-      console.log(strings.to_array())
+      strings[2] = "y";
+      console.log(strings.to_array());
       expect(strings.to_array()).toEqual(["x", "x", "y", "x"]);
     });
 
