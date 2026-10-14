@@ -53,8 +53,8 @@ export class Vec<T> extends Slice<T> {
       },
       set(target, prop, value): boolean {
         if (typeof prop === "string" && INDEX.test(prop)) {
+          // performs an update or insert
           const index = Number(prop);
-          // update path, think about setting a far index, this fails
           if (index in target.buf) target.buf[target.start + index] = value;
           else target.insert(index, value);
           return true;
