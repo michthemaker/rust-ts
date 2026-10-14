@@ -1,8 +1,8 @@
-import { expect, test, xdescribe } from "bun:test";
+import { expect, test, describe } from "bun:test";
 import { vec, Vec } from "../src/vec";
 import { OnceLock } from "../src/sync/once-lock";
 
-xdescribe("Vec<T>", () => {
+describe("Vec<T>", () => {
   test("can be indexed like arrays", () => {
     const my_nums = Vec.new<string>();
     my_nums.reserve_exact(2);

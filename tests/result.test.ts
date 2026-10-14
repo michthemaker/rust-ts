@@ -1,8 +1,8 @@
-import { describe, test, expect, xdescribe } from "bun:test";
+import { describe, test, expect } from "bun:test";
 import { Result } from "../src/result";
 import { Option } from "../src/option";
 
-xdescribe("Result<T, E>", () => {
+describe("Result<T, E>", () => {
   test("Result.is_result checks correctly", () => {
     const number = Result.Ok(3_000);
     expect(Result.is_result(number)).toBe(true);
@@ -25,10 +25,7 @@ xdescribe("Result<T, E>", () => {
     });
     test(".iter() call on Result instance is an Option instance ", () => {
       const number = Result.Err<string, number>(4_000);
-      let value: Option<unknown>;
-      for (const val of number.iter()) {
-        value = val;
-      }
+      let value: Option<string> = number.iter().next().value;
       expect(Option.is_option(value!)).toBe(true);
       expect(value!.is_none()).toBe(true);
     });
