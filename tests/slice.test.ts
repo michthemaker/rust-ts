@@ -5,6 +5,7 @@ import { inspect } from "node:util";
 import { FixedArray } from "../src/fixed_array";
 import { match, P } from "../src/match";
 import { vec, Vec } from "../src/vec";
+import { Result } from "../src/result";
 
 /** a Slice over `items`: window [start, start + len), sharing `items` as its buffer */
 function make<T>(items: T[], start = 0, len = items.length - start) {
@@ -21,9 +22,6 @@ function expect_outside_untouched(buf: number[]) {
   expect(buf.slice(0, 3)).toEqual([0, 1, 2]);
   expect(buf.slice(7)).toEqual([7, 8, 9]);
 }
-
-const either = (r: { is_ok(): boolean } & any) =>
-  r.is_ok() ? { ok: true, v: r.value as number } : { ok: false, v: r.error as number };
 
 describe("Slice<T>", () => {
   describe("View semantics", () => {
@@ -128,14 +126,14 @@ describe("Slice<T>", () => {
     });
 
     test("binary_search on empty is Err(0)", () => {
-      expect(either(make<number>([]).binary_search(3))).toEqual({ ok: false, v: 0 });
+      expect(make<number>([]).binary_search(3)).toEqual(Result.Err(0));
     });
 
     test("binary_search on a single element", () => {
       const one = make([5]);
-      expect(either(one.binary_search(5))).toEqual({ ok: true, v: 0 });
-      expect(either(one.binary_search(1))).toEqual({ ok: false, v: 0 });
-      expect(either(one.binary_search(9))).toEqual({ ok: false, v: 1 });
+      expect(one.binary_search(5)).toEqual(Result.Ok(0));
+      expect(one.binary_search(1)).toEqual(Result.Err(0));
+      expect(one.binary_search(9)).toEqual(Result.Err(1));
     });
   });
 
@@ -508,39 +506,39 @@ describe("Slice<T>", () => {
     const sorted = () => make([1, 3, 5, 7, 9]);
 
     test("found item", () => {
-      expect(either(sorted().binary_search(5))).toEqual({ ok: true, v: 2 });
-      expect(either(sorted().binary_search(1))).toEqual({ ok: true, v: 0 });
-      expect(either(sorted().binary_search(9))).toEqual({ ok: true, v: 4 });
+      expect(sorted().binary_search(5)).toEqual(Result.Ok(2));
+      expect(sorted().binary_search(1)).toEqual(Result.Ok(0));
+      expect(sorted().binary_search(9)).toEqual(Result.Ok(4));
     });
 
     test("missing item gives the insertion point", () => {
-      expect(either(sorted().binary_search(4))).toEqual({ ok: false, v: 2 });
+      expect(sorted().binary_search(4)).toEqual(Result.Err(2));
     });
 
     test("insertion at both ends", () => {
-      expect(either(sorted().binary_search(0))).toEqual({ ok: false, v: 0 });
-      expect(either(sorted().binary_search(10))).toEqual({ ok: false, v: 5 });
+      expect(sorted().binary_search(0)).toEqual(Result.Err(0));
+      expect(sorted().binary_search(10)).toEqual(Result.Err(5));
     });
 
     test("duplicates: any matching index is acceptable", () => {
       const buf = [1, 2, 2, 2, 3];
-      const r = either(make(buf).binary_search(2));
-      expect(r.ok).toBe(true);
-      expect(buf[r.v]).toBe(2);
+      const r = make(buf).binary_search(2);
+      expect(r.is_ok()).toBe(true);
+      expect(buf[r.unwrap()]).toBe(2);
     });
 
     test("custom comparator", () => {
       const descending = make([9, 7, 5, 3, 1]);
       const cmp = (a: number, b: number) => b - a;
-      expect(either(descending.binary_search(5, cmp))).toEqual({ ok: true, v: 2 });
-      expect(either(descending.binary_search(6, cmp))).toEqual({ ok: false, v: 2 });
+      expect(descending.binary_search(5, cmp)).toEqual(Result.Ok(2));
+      expect(descending.binary_search(6, cmp)).toEqual(Result.Err(2));
     });
 
     test("searches only the window", () => {
       const view = make([100, 1, 3, 5, 0], 1, 3);
-      expect(either(view.binary_search(5))).toEqual({ ok: true, v: 2 });
-      expect(either(view.binary_search(100))).toEqual({ ok: false, v: 3 }); // not the 100 before the window
-      expect(either(view.binary_search(0))).toEqual({ ok: false, v: 0 }); // not the 0 after it
+      expect(view.binary_search(5)).toEqual(Result.Ok(2));
+      expect(view.binary_search(100)).toEqual(Result.Err(3)); // not the 100 before the window
+      expect(view.binary_search(0)).toEqual(Result.Err(0)); // not the 0 after it
     });
 
     test("search on an empty slice", () => {
