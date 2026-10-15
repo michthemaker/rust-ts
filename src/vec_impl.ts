@@ -64,6 +64,16 @@ export class Vec<T> extends Slice<T> {
     }) as any; // Cast to pretend it is a raw tuple alongside our class helper
   }
 
+  /** drops everything past `len` (so the GC can reclaim it) and restores the pre-allocated holes */
+  private drop_tail(): void {
+    this.buf.length = this._len;
+    this.buf.length = this._capacity;
+  }
+
+  private check_len(n: number, what: string): void {
+    if (!Number.isInteger(n) || n < 0) throw new Error(`${what} must be a non-negative integer`);
+  }
+
   public static from<T>(array: Array<T>) {
     return new this<T>(array.length, array);
   }
@@ -74,6 +84,17 @@ export class Vec<T> extends Slice<T> {
 
   public static new<T>() {
     return new this<T>(0);
+  }
+
+  /** `vec![value; n]`: n elements, each a clone of `value` (the last one is `value` itself). */
+  public static from_elem<T>(value: T, n: number): Vec<T> {
+    const v = new this<T>(n);
+    if (n > 0) {
+      for (let i = 0; i < n - 1; i++) v.buf[i] = clone_of(value);
+      v.buf[n - 1] = value;
+      v._len = n;
+    }
+    return v;
   }
 
   public to_array() {
@@ -147,6 +168,87 @@ export class Vec<T> extends Slice<T> {
     this.buf.length = this._capacity;
 
     return removedValue as T;
+  }
+
+  /** Removes the last element and returns it, or None if the vector is empty. */
+  public pop(): Option<T> {
+    if (this._len === 0) return Option.None();
+    const value = this.buf[this._len - 1];
+    this._len--;
+    delete this.buf[this._len];
+    return Option.Some(value);
+  }
+
+  /** Removes every element. Capacity is unchanged. */
+  public clear(): void {
+    this._len = 0;
+    this.drop_tail();
+  }
+
+  /** Keeps the first `len` elements and drops the rest. Does nothing if `len >= self.len()`. */
+  public truncate(len: number): void {
+    this.check_len(len, "truncate length");
+    if (len >= this._len) return;
+    this._len = len;
+    this.drop_tail();
+  }
+
+  /**
+   * Resizes in place to `new_len`. Growing fills with clones of `value`
+   * (the last slot takes `value` itself); shrinking truncates.
+   */
+  public resize(new_len: number, value: T): void {
+    this.check_len(new_len, "resize length");
+    if (new_len <= this._len) return this.truncate(new_len);
+    this.reserve(new_len - this._len);
+    const last = new_len - 1;
+    for (let i = this._len; i < last; i++) this.buf[i] = clone_of(value);
+    this.buf[last] = value;
+    this._len = new_len;
+  }
+
+  /**
+   * Removes the element at `index` and returns it, filling the gap with the last element.
+   * O(1), but does not keep the order. Panics if `index` is out of bounds.
+   */
+  public swap_remove(index: number): T {
+    if (!Number.isInteger(index) || index < 0 || index >= this._len)
+      throw new Error(`swap_remove index (is ${index}) should be < len (is ${this._len})`);
+    const removed = this.buf[index];
+    this.buf[index] = this.buf[this._len - 1];
+    this._len--;
+    delete this.buf[this._len];
+    return removed;
+  }
+
+  /** Moves every element of `other` onto the end of this vector, leaving `other` empty. */
+  public append(other: Vec<T>): void {
+    if (other.buf === this.buf) throw new Error("cannot append a Vec to itself");
+    const count = other._len;
+    if (count === 0) return;
+    this.reserve(count);
+    for (let i = 0; i < count; i++) this.buf[this._len + i] = other.buf[i];
+    this._len += count;
+    other.clear();
+  }
+
+  /** Pushes every item of `items` (an array, a Slice, a Vec, a generator...). `items` is left alone. */
+  public extend(items: Iterable<T>): void {
+    const source = items instanceof Slice ? items.to_array() : items;
+    for (const item of source) this.push(item);
+  }
+
+  /**
+   * Splits at `at`: this vector keeps [0, at) and the returned one gets [at, len).
+   * Panics if `at > len`.
+   */
+  public split_off(at: number): Vec<T> {
+    if (!Number.isInteger(at) || at < 0 || at > this._len)
+      throw new Error(`\`at\` split index (is ${at}) should be <= len (is ${this._len})`);
+    const tail = Vec.from(this.buf.slice(at, this._len));
+    this._len = at;
+    this.drop_tail();
+    return tail;
   }
 
   public len() {

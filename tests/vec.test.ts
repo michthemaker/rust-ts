@@ -1,6 +1,7 @@
 import { expect, test, describe } from "bun:test";
 import { vec, Vec } from "../src/vec";
 import { OnceLock } from "../src/sync/once-lock";
+import { Result } from "../src/result";
 
 describe("Vec<T>", () => {
   test("can be indexed like arrays", () => {
@@ -19,6 +20,31 @@ describe("Vec<T>", () => {
     const my_nums = Vec.with_capacity<string>(5);
     expect(my_nums.len()).toBe(0);
     expect(my_nums.capacity()).toBe(5);
+  });
+  describe("vec helper", () => {
+    test("vec() returns an empty Vec<T>", () => {
+      const my_nums = vec();
+      expect(my_nums.len()).toBe(0);
+      expect(my_nums.capacity()).toBe(0);
+    });
+    test("vec([0]) works", () => {
+      const my_nums = vec([0]);
+      console.log(my_nums);
+      expect(my_nums.len()).toBe(1);
+      expect(my_nums.capacity()).toBe(1);
+    });
+    test("vec(elem, n) works too", () => {
+      const locks = vec({ name: "jejs" }, 4);
+      console.log(locks);
+      expect(locks.len()).toBe(4);
+      expect(locks.capacity()).toBe(4);
+    });
+    test("vec(elem, n) where elem is an array works too", () => {
+      const my_nums = vec([0], 4);
+      console.log(my_nums);
+      expect(my_nums.len()).toBe(4);
+      expect(my_nums.capacity()).toBe(4);
+    });
   });
   test(".get call returns an Option<T>", () => {
     const my_nums = vec([new OnceLock(), 5]);
