@@ -13,10 +13,25 @@ interface VecConstructor {
 
 const Vec = Impl as unknown as VecConstructor;
 
-const vec = function vec<T>(arr: Array<T>): Vec<T> {
+/** `vec![]` */
+function vec<T>(): Vec<T>;
+/** `vec![0, 0, 0]` */
+function vec<T>(array: Array<T>): Vec<T>;
+/** `vec![elem; n]`: n elements, each a clone of `value` (the last one is `value` itself). */
+function vec<T>(elem: T, n: number): Vec<T>;
+
+function vec(arg1?: any, arg2?: any) {
+  if (arg2) {
+    if (!Number.isInteger(arg2))
+      throw new Error(`vec(elem, n): n must be a non-negative integer, got ${arg2}`);
+    // @ts-ignore
+    return Vec.from_elem(arg1, arg2);
+  } else if (arg1)
+    // @ts-ignore
+    return Vec.from(arg1);
   // @ts-ignore
-  return Vec.from(arr);
-};
+  else return Vec.from([]);
+}
 
 declare module "./match" {
   interface PatternKinds<T> {
