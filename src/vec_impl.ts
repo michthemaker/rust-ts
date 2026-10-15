@@ -1,7 +1,11 @@
+import { is_equal } from "../lib/is_equal";
 import { clone_of } from "../lib/clone";
 import { Option } from "./option";
 import { range } from "./range";
-import { Slice } from "./slice";
+import { FixedArray } from "./fixed_array";
+import { Result } from "./result";
+import { register_vec_factory, resolve_range, Slice } from "./slice";
+import { type Range } from "./range";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295; // 2^32 - 1
 
@@ -10,6 +14,10 @@ const INDEX = /^(0|[1-9]\d*)$/;
 
 export class Vec<T> extends Slice<T> {
   private _capacity: number;
+  /** bumped by every structural change; views created from this Vec check it */
+  private _version = 0;
+  /** the Vec as the caller sees it (the index proxy), for methods that hand `self` back */
+  private outer!: Vec<T>;
 
   [DEBUG](_depth: number, options: any, inspect: Function) {
     const first_half = this.buf.slice(0, this._len);
@@ -36,7 +44,7 @@ export class Vec<T> extends Slice<T> {
     this._capacity = capacity;
     const this_value = this;
 
-    return new Proxy(this_value, {
+    const proxy = new Proxy(this_value, {
       get(target, prop) {
         if (typeof prop === "string" && INDEX.test(prop)) {
           const index = Number(prop);
@@ -62,16 +70,8 @@ export class Vec<T> extends Slice<T> {
         return Reflect.set(target, prop, value);
       },
     }) as any; // Cast to pretend it is a raw tuple alongside our class helper
-  }
-
-  /** drops everything past `len` (so the GC can reclaim it) and restores the pre-allocated holes */
-  private drop_tail(): void {
-    this.buf.length = this._len;
-    this.buf.length = this._capacity;
-  }
-
-  private check_len(n: number, what: string): void {
-    if (!Number.isInteger(n) || n < 0) throw new Error(`${what} must be a non-negative integer`);
+    this_value.outer = proxy;
+    return proxy;
   }
 
   public static from<T>(array: Array<T>) {
@@ -120,17 +120,7 @@ export class Vec<T> extends Slice<T> {
       else this._capacity = this._capacity * 2;
     this.buf[this._len] = value;
     this._len++;
-  }
-
-  /**
-   * Safe out-of-bounds index lookup protection.
-   * Returns Option.Some(T) if the index is valid, otherwise Option.None().
-   */
-  public get(index: number): Option<T> {
-    if (index < 0 || index >= this._len) {
-      return Option.None(); // Explicitly returns a structurally matchable None variant
-    }
-    return Option.Some(this.buf[index] as T);
+    this._version++;
   }
 
   /**
@@ -148,6 +138,7 @@ export class Vec<T> extends Slice<T> {
     }
     this.buf.splice(index, 0, value);
     this._len++;
+    this._version++;
   }
 
   /**
@@ -162,6 +153,7 @@ export class Vec<T> extends Slice<T> {
     // 🚀 NO LOOPS: Extracts the element and shifts trailing elements left instantly.
     const [removedValue] = this.buf.splice(index, 1);
     this._len--;
+    this._version++;
 
     // Splice shrinks array length by 1. Reset the underlying buffer length
     // back to its true capacity so we don't lose our pre-allocated slots.
@@ -170,17 +162,29 @@ export class Vec<T> extends Slice<T> {
     return removedValue as T;
   }
 
+  /** drops everything past `len` (so the GC can reclaim it) and restores the pre-allocated holes */
+  private drop_tail(): void {
+    this.buf.length = this._len;
+    this.buf.length = this._capacity;
+  }
+
+  private check_len(n: number, what: string): void {
+    if (!Number.isInteger(n) || n < 0) throw new Error(`${what} must be a non-negative integer`);
+  }
+
   /** Removes the last element and returns it, or None if the vector is empty. */
   public pop(): Option<T> {
     if (this._len === 0) return Option.None();
     const value = this.buf[this._len - 1];
     this._len--;
+    this._version++;
     delete this.buf[this._len];
     return Option.Some(value);
   }
 
   /** Removes every element. Capacity is unchanged. */
   public clear(): void {
+    if (this._len > 0) this._version++;
     this._len = 0;
     this.drop_tail();
   }
@@ -189,6 +193,7 @@ export class Vec<T> extends Slice<T> {
   public truncate(len: number): void {
     this.check_len(len, "truncate length");
     if (len >= this._len) return;
+    this._version++;
     this._len = len;
     this.drop_tail();
   }
@@ -205,6 +210,7 @@ export class Vec<T> extends Slice<T> {
     for (let i = this._len; i < last; i++) this.buf[i] = clone_of(value);
     this.buf[last] = value;
     this._len = new_len;
+    this._version++;
   }
 
   /**
@@ -217,6 +223,7 @@ export class Vec<T> extends Slice<T> {
     const removed = this.buf[index];
     this.buf[index] = this.buf[this._len - 1];
     this._len--;
+    this._version++;
     delete this.buf[this._len];
     return removed;
   }
@@ -229,6 +236,7 @@ export class Vec<T> extends Slice<T> {
     this.reserve(count);
     for (let i = 0; i < count; i++) this.buf[this._len + i] = other.buf[i];
     this._len += count;
+    this._version++;
     other.clear();
   }
 
@@ -246,9 +254,190 @@ export class Vec<T> extends Slice<T> {
     if (!Number.isInteger(at) || at < 0 || at > this._len)
       throw new Error(`\`at\` split index (is ${at}) should be <= len (is ${this._len})`);
     const tail = Vec.from(this.buf.slice(at, this._len));
+    if (at < this._len) this._version++;
     this._len = at;
     this.drop_tail();
     return tail;
+  }
+
+  /** Every view made from this Vec stops working after a structural change to it. */
+  protected override sub(from: number, to: number): Slice<T> {
+    const seen = this._version;
+    return new Slice(this.buf, this.start + from, to - from, () => {
+      if (this._version !== seen)
+        throw new Error("slice invalidated: the Vec was modified after this view was created");
+    });
+  }
+
+  /** A view of the whole Vec. Live while the Vec is unchanged; throws once the Vec is restructured. */
+  public as_slice(): Slice<T> {
+    return this.sub(0, this._len);
+  }
+
+  /** Removes and returns the last element if `pred` returns true for it, otherwise returns None. */
+  public pop_if(pred: (item: T) => boolean): Option<T> {
+    if (this._len === 0 || !pred(this.buf[this._len - 1])) return Option.None();
+    return this.pop();
+  }
+
+  /** Like `resize`, but each new slot is filled by calling `make`. */
+  public resize_with(new_len: number, make: () => T): void {
+    this.check_len(new_len, "resize length");
+    if (new_len <= this._len) return this.truncate(new_len);
+    this.reserve(new_len - this._len);
+    for (let i = this._len; i < new_len; i++) this.buf[i] = make();
+    this._len = new_len;
+    this._version++;
+  }
+
+  /** Appends a clone of every element of `items`. */
+  public extend_from_slice(items: Slice<T> | readonly T[]): void {
+    const source = items instanceof Slice ? items.to_array() : items;
+    for (const item of source) this.push(clone_of(item));
+  }
+
+  /** Keeps only the elements for which `keep` returns true, in order. Leaves the Vec unchanged if `keep` throws. */
+  public retain(keep: (item: T) => boolean): void {
+    const kept: T[] = [];
+    for (let i = 0; i < this._len; i++) if (keep(this.buf[i])) kept.push(this.buf[i]);
+    this.replace_contents(kept);
+  }
+
+  /** Same as `retain`; the predicate may also mutate the elements it is given. */
+  public retain_mut(keep: (item: T) => boolean): void {
+    this.retain(keep);
+  }
+
+  /**
+   * Removes consecutive elements that `same` considers equal. `same(current, previous_kept)`
+   * returning true removes `current`.
+   */
+  public dedup_by(same: (current: T, previous: T) => boolean): void {
+    const kept: T[] = [];
+    for (let i = 0; i < this._len; i++) {
+      const item = this.buf[i];
+      if (kept.length === 0 || !same(item, kept[kept.length - 1])) kept.push(item);
+    }
+    this.replace_contents(kept);
+  }
+
+  /** Removes consecutive elements whose keys are equal. */
+  public dedup_by_key<K>(key: (item: T) => K): void {
+    this.dedup_by((a, b) => is_equal(key(a), key(b)));
+  }
+
+  /** Removes consecutive repeated elements, compared by value. */
+  public dedup(): void {
+    this.dedup_by((a, b) => is_equal(a, b));
+  }
+
+  /** Writes `kept` over the front of the buffer when it is shorter than the current contents. */
+  private replace_contents(kept: T[]): void {
+    if (kept.length === this._len) return;
+    for (let i = 0; i < kept.length; i++) this.buf[i] = kept[i];
+    this._len = kept.length;
+    this._version++;
+    this.drop_tail();
+  }
+
+  /**
+   * Removes the elements in `range` and returns them. The removal happens immediately,
+   * even if the returned iterator is never consumed. Panics if `range` is out of bounds.
+   */
+  public drain(range: Range): IterableIterator<T> {
+    const [from, to] = resolve_range(range, this._len);
+    const removed = this.buf.slice(from, to);
+    if (to > from) {
+      this.buf.splice(from, to - from);
+      this._len -= to - from;
+      this._version++;
+      this.drop_tail();
+    }
+    return removed.values();
+  }
+
+  /**
+   * Replaces the elements in `range` with `items` and returns the removed ones. Like `drain`,
+   * the change happens immediately. Panics if `range` is out of bounds.
+   */
+  public splice(range: Range, items: Iterable<T>): IterableIterator<T> {
+    const [from, to] = resolve_range(range, this._len);
+    const incoming = [...items];
+    const removed = this.buf.slice(from, to);
+    if (removed.length === 0 && incoming.length === 0) return removed.values();
+    const tail = this.buf.slice(to, this._len);
+    const old_len = this._len;
+    const new_len = from + incoming.length + tail.length;
+    if (new_len > old_len) this.reserve(new_len - old_len);
+    let w = from;
+    for (const item of incoming) this.buf[w++] = item;
+    for (const item of tail) this.buf[w++] = item;
+    this._len = new_len;
+    this._version++;
+    if (new_len < old_len) this.drop_tail();
+    return removed.values();
+  }
+
+  /** Shrinks the capacity to `max(len, min_capacity)`, if that is smaller than the current one. */
+  public shrink_to(min_capacity: number): void {
+    this.check_len(min_capacity, "capacity");
+    const target = Math.max(this._len, min_capacity);
+    if (target < this._capacity) {
+      this._capacity = target;
+      this.buf.length = target;
+    }
+  }
+
+  /** Like `reserve`, but returns an Err instead of throwing when the capacity would exceed the engine limit. */
+  public try_reserve(additional: number): Result<undefined, string> {
+    if (this._len + additional > MAX_ARRAY_LENGTH) return Result.Err("capacity overflow");
+    this.reserve(additional);
+    return Result.Ok(undefined);
+  }
+
+  /** Like `reserve_exact`, but returns an Err instead of throwing when the capacity would exceed the engine limit. */
+  public try_reserve_exact(additional: number): Result<undefined, string> {
+    if (this._len + additional > MAX_ARRAY_LENGTH) return Result.Err("capacity overflow");
+    this.reserve_exact(additional);
+    return Result.Ok(undefined);
+  }
+
+  /**
+   * Creates a consuming iterator, that is, one that moves each value out of the vector
+   * (from start to end). The vector is consumed: it cannot be used after calling this.
+   *
+   * Rust enforces that at compile time. JS cannot, so here the vector is left empty with
+   * zero capacity, and the returned iterator owns the elements.
+   */
+  public into_iter(): IterableIterator<T> {
+    return this.take_all().values();
+  }
+
+  /**
+   * Tries to turn this Vec into a fixed array of exactly `size` elements. The Vec is consumed
+   * on success (its elements move into the array and it is left empty). On a length mismatch
+   * you get the Vec back, untouched, as the Err.
+   */
+  public try_into_array<N extends number>(size: N): Result<FixedArray<T, N>, Vec<T>> {
+    if (this._len !== size) return Result.Err<FixedArray<T, N>, Vec<T>>(this.outer);
+    const items = this.take_all();
+    const array = new FixedArray<T, N>(items[0], size);
+    array.copy_from_slice(items);
+    return Result.Ok<FixedArray<T, N>, Vec<T>>(array);
+  }
+
+  /** Moves every element out, leaving an empty Vec with no capacity. */
+  private take_all(): T[] {
+    const items = this.buf.slice(0, this._len);
+    if (this._len > 0) this._version++;
+    this._len = 0;
+    this._capacity = 0;
+    this.buf.length = 0;
+    return items;
+  }
+
+  public static from_iter<T>(items: Iterable<T>): Vec<T> {
+    return Vec.from([...items]);
   }
 
   public len() {
@@ -310,3 +499,5 @@ export class Vec<T> extends Slice<T> {
     }
   }
 }
+
+register_vec_factory((items) => Vec.from(items));

@@ -1,6 +1,9 @@
 import { is_equal } from "../lib/is_equal";
+import { clone_of } from "../lib/clone";
 import { Option } from "./option";
 import { Result } from "./result";
+import type { Vec } from "./vec_impl";
+import { Range } from "./range";
 
 const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 const INDEX = /^(0|[1-9]\d*)$/;
@@ -12,6 +15,38 @@ function panic(msg: string): never {
 const cmp_default = (a: any, b: any): number => (a < b ? -1 : a > b ? 1 : 0);
 
 type Source<T> = Slice<T> | readonly T[];
+
+/** Turns a range into a checked [start, end) pair, panicking like Rust's slice indexing. */
+export function resolve_range(r: Range, len: number): [number, number] {
+  const start = r.start;
+  const end = r.inclusive ? r.end + 1 : r.end;
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < 0)
+    panic(`range ${start}..${end} must use non-negative integers`);
+  if (start > end) panic(`slice index starts at ${start} but ends at ${end}`);
+  if (r.step !== 1) panic("slicing ranges cannot have a step");
+  if (end > len) panic(`range end index ${end} out of range for slice of length ${len}`);
+  return [start, end];
+}
+
+function try_resolve_range(r: Range, len: number): [number, number] | undefined {
+  try {
+    return resolve_range(r, len);
+  } catch {
+    return undefined;
+  }
+}
+
+// Slice cannot import Vec at runtime (Vec extends Slice), so Vec registers a factory
+// when it loads. Methods that return a Vec (to_vec, concat, join, repeat) use it.
+let make_vec: ((items: any[]) => any) | undefined;
+export function register_vec_factory(factory: (items: any[]) => any): void {
+  make_vec = factory;
+}
+function new_vec<U>(items: U[]): Vec<U> {
+  if (!make_vec)
+    throw new Error("Vec is not loaded: import it before calling to_vec/concat/join/repeat");
+  return make_vec(items);
+}
 
 function as_array<T>(src: Source<T>): readonly T[] {
   return Array.isArray(src) ? src : (src as Slice<T>).to_array();
@@ -26,19 +61,28 @@ export class Slice<T> {
   protected buf: T[];
   protected start: number;
   protected _len: number;
+  /** throws if this view is no longer valid (set by owners that can restructure, like Vec) */
+  protected guard?: () => void;
 
   [DEBUG](_depth: number, options: any, inspect: Function) {
+    try {
+      this.guard?.();
+    } catch {
+      return "Slice[<invalidated>]";
+    }
     const items = this.to_array().map((item) => inspect(item, options));
     return `Slice[${items.join(", ")}]`;
   }
 
-  constructor(buf: T[], start: number, len: number) {
+  constructor(buf: T[], start: number, len: number, guard?: () => void) {
     this.buf = buf;
     this.start = start;
     this._len = len;
+    this.guard = guard;
 
     return new Proxy(this, {
       get(target, prop) {
+        if (prop !== DEBUG) target.guard?.();
         if (typeof prop === "string" && INDEX.test(prop)) {
           const index = Number(prop);
           if (index >= target._len)
@@ -49,6 +93,7 @@ export class Slice<T> {
         return typeof value === "function" ? value.bind(target) : value;
       },
       set(target, prop, value) {
+        target.guard?.();
         if (typeof prop === "string" && INDEX.test(prop)) {
           const index = Number(prop);
           if (index >= target._len)
@@ -65,11 +110,7 @@ export class Slice<T> {
 
   /** a new view over the same buffer: [from, to) relative to this slice */
   protected sub(from: number, to: number): Slice<T> {
-    return new Slice(this.buf, this.start + from, to - from);
-  }
-
-  public as_slice() {
-    return new Slice(this.buf, 0, this._len);
+    return new Slice(this.buf, this.start + from, to - from, this.guard);
   }
 
   // ------------------------------------------------------------- basic info
@@ -88,9 +129,22 @@ export class Slice<T> {
 
   // ---------------------------------------------------------------- access
 
-  public get(index: number): Option<T> {
-    if (!Number.isInteger(index) || index < 0 || index >= this._len) return Option.None();
-    return Option.Some(this.buf[this.start + index]);
+  public get(index: number): Option<T>;
+  public get(range: Range): Option<Slice<T>>;
+  public get(arg: number | Range): Option<T> | Option<Slice<T>> {
+    if (typeof arg === "number") {
+      if (!Number.isInteger(arg) || arg < 0 || arg >= this._len) return Option.None();
+      return Option.Some(this.buf[this.start + arg]);
+    }
+    const bounds = try_resolve_range(arg, this._len);
+    if (!bounds) return Option.None();
+    return Option.Some(this.sub(bounds[0], bounds[1]));
+  }
+
+  /** `&v[a..b]`: a view of the range. Panics if the range is out of bounds; see `get(range)` for the checked form. */
+  public slice(range: Range): Slice<T> {
+    const [from, to] = resolve_range(range, this._len);
+    return this.sub(from, to);
   }
 
   public first(): Option<T> {
@@ -127,10 +181,13 @@ export class Slice<T> {
   // ------------------------------------------------------------- iteration
 
   public *iter(): IterableIterator<T> {
-    for (let i = 0; i < this._len; i++) yield this.buf[this.start + i];
+    for (let i = 0; i < this._len; i++) {
+      this.guard?.();
+      yield this.buf[this.start + i];
+    }
   }
 
-  public [Symbol.iterator](): IterableIterator<T> {
+  [Symbol.iterator](): IterableIterator<T> {
     return this.iter();
   }
 
@@ -138,7 +195,10 @@ export class Slice<T> {
     if (size <= 0) panic("window size must be non-zero");
     const self = this;
     return (function* () {
-      for (let i = 0; i + size <= self._len; i++) yield self.sub(i, i + size);
+      for (let i = 0; i + size <= self._len; i++) {
+        self.guard?.();
+        yield self.sub(i, i + size);
+      }
     })();
   }
 
@@ -146,7 +206,10 @@ export class Slice<T> {
     if (size <= 0) panic("chunk size must be non-zero");
     const self = this;
     return (function* () {
-      for (let i = 0; i < self._len; i += size) yield self.sub(i, Math.min(i + size, self._len));
+      for (let i = 0; i < self._len; i += size) {
+        self.guard?.();
+        yield self.sub(i, Math.min(i + size, self._len));
+      }
     })();
   }
 
@@ -154,7 +217,10 @@ export class Slice<T> {
     if (size <= 0) panic("chunk size must be non-zero");
     const self = this;
     return (function* () {
-      for (let i = 0; i + size <= self._len; i += size) yield self.sub(i, i + size);
+      for (let i = 0; i + size <= self._len; i += size) {
+        self.guard?.();
+        yield self.sub(i, i + size);
+      }
     })();
   }
 
@@ -205,6 +271,75 @@ export class Slice<T> {
 
   public eq(other: Source<T>): boolean {
     return is_equal(this.to_array(), as_array(other));
+  }
+
+  /** Subslices separated by elements matching `pred` (the matching elements are not included). */
+  public split(pred: (item: T) => boolean): IterableIterator<Slice<T>> {
+    const self = this;
+    return (function* () {
+      let from = 0;
+      for (let i = 0; i < self._len; i++) {
+        self.guard?.();
+        if (pred(self.buf[self.start + i])) {
+          yield self.sub(from, i);
+          from = i + 1;
+        }
+      }
+      yield self.sub(from, self._len);
+    })();
+  }
+
+  /** Clones every element into a new Vec. */
+  public to_vec(): Vec<T> {
+    return new_vec(this.to_array().map((item) => clone_of(item)));
+  }
+
+  /** Flattens a slice of slices/arrays into one Vec. (For strings use `join("")`.) */
+  public concat<U>(this: Slice<Source<U>>): Vec<U> {
+    const out: U[] = [];
+    for (let i = 0; i < this._len; i++)
+      for (const x of as_array(this.buf[this.start + i])) out.push(x);
+    return new_vec(out);
+  }
+
+  /** Strings: joins with `sep`. Slices/arrays: flattens with the slice `sep` between them. */
+  public join(this: Slice<string>, sep: string): string;
+  public join<U>(this: Slice<Source<U>>, sep: Source<U>): Vec<U>;
+  public join(this: Slice<any>, sep: any): any {
+    if (typeof sep === "string") return this.to_array().join(sep);
+    const separator = as_array<any>(sep);
+    const out: any[] = [];
+    for (let i = 0; i < this._len; i++) {
+      if (i > 0) for (const s of separator) out.push(s);
+      for (const x of as_array<any>(this.buf[this.start + i])) out.push(x);
+    }
+    return new_vec(out);
+  }
+
+  /** A new Vec holding this slice's elements `n` times in a row (each repetition is a clone). */
+  public repeat(n: number): Vec<T> {
+    if (!Number.isInteger(n) || n < 0) panic("repeat count must be a non-negative integer");
+    const out: T[] = [];
+    for (let k = 0; k < n; k++)
+      for (let i = 0; i < this._len; i++) out.push(clone_of(this.buf[this.start + i]));
+    return new_vec(out);
+  }
+
+  /** Copies the elements in `range` to `dest`, overlap-safe (like memmove). Panics if either end is out of bounds. */
+  public copy_within(range: Range, dest: number): void {
+    const [from, to] = resolve_range(range, this._len);
+    const count = to - from;
+    if (!Number.isInteger(dest) || dest < 0 || dest > this._len - count)
+      panic("dest is out of bounds");
+    const moved = this.buf.slice(this.start + from, this.start + to);
+    for (let i = 0; i < count; i++) this.buf[this.start + dest + i] = moved[i];
+  }
+
+  /** Like copy_from_slice, but clones each element. Panics if the lengths differ. */
+  public clone_from_slice(src: Source<T>): void {
+    const s = as_array(src);
+    if (s.length !== this._len) panic("destination and source slices have different lengths");
+    for (let i = 0; i < this._len; i++) this.buf[this.start + i] = clone_of(s[i]);
   }
 
   // ------------------------------------------------------------ in-place ops
