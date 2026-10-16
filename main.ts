@@ -1,4 +1,5 @@
-import { f32, f64, u8, usize } from "./src/numbers";
-import { Vec } from "./src/vec";
+import { i8, u64, usize } from "./src/numbers";
 
-const my_vec = Vec.with_capacity(usize(45));
+console.log(i8(127));
+console.log(u64(127n));
+console.log(usize(10300));

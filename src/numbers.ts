@@ -1,21 +1,13 @@
-// =====================================================================
-// Sized numbers, type level only.
-// Literals are range-checked at compile time (`u8(256)` is an error),
-// plain `number` / `bigint` values pass the type check (runtime's job).
-// Function bodies come later: everything below is `declare`.
-// =====================================================================
+import { Prettify } from "../lib/types";
+import { Result } from "./result";
 
-// ---------------------------------------------------------------- tags
-// Weak tags: plain numbers and literals flow in freely, but a u8 will not
-// silently pass as a u16 (or as an f32).
-
-// All three share ONE property name, so two different tags always conflict
-// (u8 vs u16, u8 vs f32, u64 vs u128 are all errors).
 export type Int<K extends string> = number & { readonly __num?: K };
+export type UInt<K extends string> = number & { readonly __num?: K };
 export type BigInt_<K extends string> = bigint & { readonly __num?: K };
+export type BigUInt_<K extends string> = bigint & { readonly __num?: K };
 export type Float<K extends string> = number & { readonly __num?: K };
 
-// ------------------------------------------------------- digit arithmetic
+// digit arithmetic
 // Compares decimal strings, so the cost is the number of digits (at most 39
 // for u128), not the number of legal values.
 
@@ -76,23 +68,137 @@ type InRange<N extends number | bigint, MinMag extends string, Max extends strin
 
 // ----------------------------------------------------------------- unsigned
 
-export type u8 = Int<"u8">;
-export type u16 = Int<"u16">;
-export type u32 = Int<"u32">;
-export type u64 = BigInt_<"u64">;
-export type u128 = BigInt_<"u128">;
-export type usize = Int<"usize">; // 32-bit: JS array indices stop at 2^32 - 1
+export type u8 = UInt<"u8">;
+export type u16 = UInt<"u16">;
+export type u32 = UInt<"u32">;
+export type u64 = BigUInt_<"u64">;
+export type u128 = BigUInt_<"u128">;
+export type usize = UInt<"usize">; // 32-bit: JS array indices stop at 2^32 - 1
 
-export declare const u8: <const N extends number>(n: InRange<N, "0", "255">) => u8;
-export declare const u16: <const N extends number>(n: InRange<N, "0", "65535">) => u16;
-export declare const u32: <const N extends number>(n: InRange<N, "0", "4294967295">) => u32;
-export declare const u64: <const N extends bigint>(
-  n: InRange<N, "0", "18446744073709551615">,
-) => u64;
-export declare const u128: <const N extends bigint>(
-  n: InRange<N, "0", "340282366920938463463374607431768211455">,
-) => u128;
-export declare const usize: <const N extends number>(n: InRange<N, "0", "4294967295">) => usize;
+const uint_type = <N extends number>(min: number, max: number) => {
+  return {
+    MIN: min as N,
+    MAX: max as N,
+    is: (n: number): n is N => Number.isInteger(n) && n >= min && n <= max,
+    try_from(n: number): Result<N, string> {
+      return this.is(n)
+        ? Result.Ok(n)
+        : Result.Err("out of range integral type conversion attempted");
+    },
+  };
+};
+
+const int_type = uint_type;
+
+const big_uint_type = <N extends bigint>(min: bigint, max: bigint) => {
+  return {
+    MIN: min as N,
+    MAX: max as N,
+    // is is integer here?
+    is: (n: bigint): n is N => typeof n === "bigint" && n >= min && n <= max,
+    try_from(n: bigint): Result<N, string> {
+      return this.is(n)
+        ? Result.Ok(n)
+        : Result.Err("out of range integral type conversion attempted");
+    },
+  };
+};
+
+const big_int_type = big_uint_type;
+
+// type _AsInterface<T> = T extends (...args: infer Args) => infer Return
+//   ? { (...args: Args): Return } & { [K in keyof T]: T[K] }
+//   : T;
+
+function object_assign<T extends {}, U>(target: T, source: U) {
+  return Object.assign(target, source);
+}
+
+interface UIntType<N extends number> {
+  /** largest finite value */
+  MAX: N;
+  /** most negative finite value */
+  MIN: N;
+  is(n: number): n is N;
+  try_from(n: number): Result<N, string>;
+}
+
+interface U8 extends Prettify<UIntType<u8>> {
+  <const N extends number>(n: InRange<N, "0", "255">): u8;
+}
+interface U16 extends Prettify<UIntType<u16>> {
+  <const N extends number>(n: InRange<N, "0", "65535">): u16;
+}
+interface U32 extends Prettify<UIntType<u32>> {
+  <const N extends number>(n: InRange<N, "0", "4294967295">): u32;
+}
+interface USize extends Prettify<UIntType<usize>> {
+  <const N extends number>(n: InRange<N, "0", "4294967295">): usize;
+}
+
+interface BigUIntType<N extends bigint> {
+  /** largest finite value */
+  MAX: N;
+  /** most negative finite value */
+  MIN: N;
+  is(n: bigint): n is N;
+  try_from(n: bigint): Result<N, string>;
+}
+interface U64 extends Prettify<BigUIntType<u64>> {
+  <const N extends bigint>(n: InRange<N, "0", "18446744073709551615">): u64;
+}
+interface U128 extends Prettify<BigUIntType<u128>> {
+  <const N extends bigint>(n: InRange<N, "0", "340282366920938463463374607431768211455">): u128;
+}
+
+export const u8: U8 = object_assign(
+  <const N extends number>(n: InRange<N, "0", "255">): u8 => {
+    if (!(Number.isInteger(n) && n >= 0 && n <= 255))
+      throw new Error(`literal out of range for u8: ${n}`);
+    return n;
+  },
+  uint_type<u8>(0, 255),
+);
+export const u16: U16 = object_assign(
+  <const N extends number>(n: InRange<N, "0", "65535">): u16 => {
+    if (!(Number.isInteger(n) && n >= 0 && n <= 65535))
+      throw new Error(`literal out of range for u16: ${n}`);
+    return n;
+  },
+  uint_type<u16>(0, 65535),
+);
+export const u32: U32 = object_assign(
+  <const N extends number>(n: InRange<N, "0", "4294967295">): u32 => {
+    if (!(Number.isInteger(n) && n >= 0 && n <= 4294967295))
+      throw new Error(`literal out of range for u32: ${n}`);
+    return n;
+  },
+  uint_type<u32>(0, 4294967295),
+);
+export const usize: USize = object_assign(
+  <const N extends number>(n: InRange<N, "0", "4294967295">): usize => {
+    if (!(Number.isInteger(n) && n >= 0 && n <= 4294967295))
+      throw new Error(`literal out of range for usize: ${n}`);
+    return n;
+  },
+  uint_type<usize>(0, 4294967295),
+);
+export const u64: U64 = object_assign(
+  <const N extends bigint>(n: InRange<N, "0", "18446744073709551615">): u64 => {
+    if (!(typeof n === "bigint" && n >= 0n && n <= 18446744073709551615n))
+      throw new Error(`literal out of range for u64: ${n}`);
+    return n;
+  },
+  big_uint_type<u64>(0n, 18446744073709551615n),
+);
+export const u128: U128 = object_assign(
+  <const N extends bigint>(n: InRange<N, "0", "340282366920938463463374607431768211455">): u128 => {
+    if (!(typeof n === "bigint" && n >= 0n && n <= 340282366920938463463374607431768211455n))
+      throw new Error(`literal out of range for u128: ${n}`);
+    return n;
+  },
+  big_uint_type<u128>(0n, 340282366920938463463374607431768211455n),
+);
 
 // ------------------------------------------------------------------- signed
 // MinMag is the magnitude of the minimum (i8: -128 -> "128").
@@ -104,24 +210,112 @@ export type i64 = BigInt_<"i64">;
 export type i128 = BigInt_<"i128">;
 export type isize = Int<"isize">; // 32-bit, like usize
 
-export declare const i8: <const N extends number>(n: InRange<N, "128", "127">) => i8;
-export declare const i16: <const N extends number>(n: InRange<N, "32768", "32767">) => i16;
-export declare const i32: <const N extends number>(
-  n: InRange<N, "2147483648", "2147483647">,
-) => i32;
-export declare const i64: <const N extends bigint>(
-  n: InRange<N, "9223372036854775808", "9223372036854775807">,
-) => i64;
-export declare const i128: <const N extends bigint>(
-  n: InRange<
-    N,
-    "170141183460469231731687303715884105728",
-    "170141183460469231731687303715884105727"
-  >,
-) => i128;
-export declare const isize: <const N extends number>(
-  n: InRange<N, "2147483648", "2147483647">,
-) => isize;
+interface IntType<N extends number> {
+  /** largest finite value */
+  MAX: N;
+  /** most negative finite value */
+  MIN: N;
+  is(n: number): n is N;
+  try_from(n: number): Result<N, string>;
+}
+
+interface I8 extends Prettify<IntType<i8>> {
+  <const N extends number>(n: InRange<N, "128", "127">): i8;
+}
+interface I16 extends Prettify<IntType<i16>> {
+  <const N extends number>(n: InRange<N, "32768", "32767">): i16;
+}
+interface I32 extends Prettify<IntType<i32>> {
+  <const N extends number>(n: InRange<N, "2147483648", "2147483647">): i32;
+}
+interface ISize extends Prettify<IntType<isize>> {
+  <const N extends number>(n: InRange<N, "2147483648", "2147483647">): isize;
+}
+
+interface BigIntType<N extends bigint> {
+  /** largest finite value */
+  MAX: N;
+  /** most negative finite value */
+  MIN: N;
+  is(n: bigint): n is N;
+  try_from(n: bigint): Result<N, string>;
+}
+interface I64 extends Prettify<BigIntType<i64>> {
+  <const N extends bigint>(n: InRange<N, "9223372036854775808", "9223372036854775807">): i64;
+}
+interface I128 extends Prettify<BigIntType<i128>> {
+  <const N extends bigint>(
+    n: InRange<
+      N,
+      "170141183460469231731687303715884105728",
+      "170141183460469231731687303715884105727"
+    >,
+  ): i128;
+}
+
+export const i8: I8 = object_assign(
+  <const N extends number>(n: InRange<N, "128", "127">): i8 => {
+    if (!(Number.isInteger(n) && n >= -128 && n <= 127))
+      throw new Error(`literal out of range for i8: ${n}`);
+    return n;
+  },
+  int_type<i8>(-128, 127),
+);
+export const i16: I16 = object_assign(
+  <const N extends number>(n: InRange<N, "32768", "32767">): i16 => {
+    if (!(Number.isInteger(n) && n >= -32768 && n <= 32767))
+      throw new Error(`literal out of range for i16: ${n}`);
+    return n;
+  },
+  int_type<i16>(-32768, 32767),
+);
+export const i32: I32 = object_assign(
+  <const N extends number>(n: InRange<N, "2147483648", "2147483647">): i32 => {
+    if (!(Number.isInteger(n) && n >= -2147483648 && n <= 2147483647))
+      throw new Error(`literal out of range for i32: ${n}`);
+    return n;
+  },
+  int_type<i32>(-2147483648, 2147483647),
+);
+export const isize: ISize = object_assign(
+  <const N extends number>(n: InRange<N, "2147483648", "2147483647">): isize => {
+    if (!(Number.isInteger(n) && n >= -2147483648 && n <= 2147483647))
+      throw new Error(`literal out of range for isize: ${n}`);
+    return n;
+  },
+  int_type<isize>(-2147483648, 2147483647),
+);
+export const i64: I64 = object_assign(
+  <const N extends bigint>(n: InRange<N, "9223372036854775808", "9223372036854775807">): i64 => {
+    if (!(typeof n === "bigint" && n >= -9223372036854775808n && n <= 9223372036854775807n))
+      throw new Error(`literal out of range for i64: ${n}`);
+    return n;
+  },
+  big_int_type<i64>(-9223372036854775808n, 9223372036854775807n),
+);
+export const i128: I128 = object_assign(
+  <const N extends bigint>(
+    n: InRange<
+      N,
+      "170141183460469231731687303715884105728",
+      "170141183460469231731687303715884105727"
+    >,
+  ): i128 => {
+    if (
+      !(
+        typeof n === "bigint" &&
+        n >= -170141183460469231731687303715884105728n &&
+        n <= 170141183460469231731687303715884105727n
+      )
+    )
+      throw new Error(`literal out of range for i128: ${n}`);
+    return n;
+  },
+  big_int_type<i128>(
+    -170141183460469231731687303715884105728n,
+    170141183460469231731687303715884105727n,
+  ),
+);
 
 // ------------------------------------------------------------------- floats
 // f64 accepts any number literal. f32 rejects literals above ~3.4028235e38
@@ -146,7 +340,80 @@ type F32Ok<N extends number> = `${N}` extends `-${infer S}` ? F32Mag<S> : F32Mag
 export type f32 = Float<"f32">;
 export type f64 = Float<"f64">;
 
-export declare const f32: <const N extends number>(
-  n: number extends N ? N : F32Ok<N> extends true ? N : never,
-) => f32;
-export declare const f64: <const N extends number>(n: N) => f64;
+interface FloatConstants<F extends number> {
+  /** largest finite value */
+  MAX: F;
+  /** most negative finite value (-MAX; floats differ from ints here) */
+  MIN: F;
+  /** smallest positive normal value */
+  MIN_POSITIVE: F;
+  /** gap between 1.0 and the next representable value */
+  EPSILON: F;
+  INFINITY: F;
+  NEG_INFINITY: F;
+  NAN: F;
+}
+
+interface FloatType<F extends number> extends FloatConstants<F> {
+  /** true for any number whose rounded value does not overflow. NaN and +-Infinity are valid floats. */
+  is(n: number): n is F;
+  /** Ok(rounded value), or Err if a finite number overflows this type. */
+  try_from(n: number): Result<F, string>;
+}
+
+interface F32 extends Prettify<FloatType<f32>> {
+  <const N extends number>(n: number extends N ? N : F32Ok<N> extends true ? N : never): f32;
+}
+interface F64 extends Prettify<FloatType<f64>> {
+  <const N extends number>(n: N): f64;
+}
+
+function float_type<F extends number>(
+  limits: { max: number; min_positive: number; epsilon: number },
+  round: (n: number) => number, // Math.fround for f32, identity for f64
+): FloatType<F> {
+  const is = (n: number): n is F =>
+    typeof n === "number" && (!Number.isFinite(n) || Number.isFinite(round(n)));
+  return {
+    MAX: limits.max as F,
+    MIN: -limits.max as F,
+    MIN_POSITIVE: limits.min_positive as F,
+    EPSILON: limits.epsilon as F,
+    INFINITY: Infinity as F,
+    NEG_INFINITY: -Infinity as F,
+    NAN: NaN as F,
+    is,
+    try_from(n: number): Result<F, string> {
+      return is(n)
+        ? Result.Ok(round(n) as F)
+        : Result.Err("out of range floating point conversion attempted");
+    },
+  };
+}
+
+export const f32: F32 = object_assign(
+  (n: number): f32 => {
+    if (!(typeof n === "number" && (!Number.isFinite(n) || Number.isFinite(Math.fround(n)))))
+      throw new Error(`literal out of range for f32: ${n}`);
+    return Math.fround(n) as f32;
+  },
+  float_type<f32>(
+    {
+      max: 3.4028234663852886e38,
+      min_positive: 1.1754943508222875e-38,
+      epsilon: 1.1920928955078125e-7,
+    },
+    Math.fround,
+  ),
+);
+
+export const f64: F64 = object_assign(
+  (n: number): f64 => {
+    if (typeof n !== "number") throw new Error(`expected a number for f64, got ${typeof n}`);
+    return n as f64;
+  },
+  float_type<f64>(
+    { max: Number.MAX_VALUE, min_positive: 2.2250738585072014e-308, epsilon: Number.EPSILON },
+    (n) => n,
+  ),
+);
