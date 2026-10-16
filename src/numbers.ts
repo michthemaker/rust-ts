@@ -123,16 +123,16 @@ interface UIntType<N extends number> {
   try_from(n: number): Result<N, string>;
 }
 
-interface U8 extends Prettify<UIntType<u8>> {
+export interface U8 extends Prettify<UIntType<u8>> {
   <const N extends number>(n: InRange<N, "0", "255">): u8;
 }
-interface U16 extends Prettify<UIntType<u16>> {
+export interface U16 extends Prettify<UIntType<u16>> {
   <const N extends number>(n: InRange<N, "0", "65535">): u16;
 }
-interface U32 extends Prettify<UIntType<u32>> {
+export interface U32 extends Prettify<UIntType<u32>> {
   <const N extends number>(n: InRange<N, "0", "4294967295">): u32;
 }
-interface USize extends Prettify<UIntType<usize>> {
+export interface USize extends Prettify<UIntType<usize>> {
   <const N extends number>(n: InRange<N, "0", "4294967295">): usize;
 }
 
@@ -144,10 +144,10 @@ interface BigUIntType<N extends bigint> {
   is(n: bigint): n is N;
   try_from(n: bigint): Result<N, string>;
 }
-interface U64 extends Prettify<BigUIntType<u64>> {
+export interface U64 extends Prettify<BigUIntType<u64>> {
   <const N extends bigint>(n: InRange<N, "0", "18446744073709551615">): u64;
 }
-interface U128 extends Prettify<BigUIntType<u128>> {
+export interface U128 extends Prettify<BigUIntType<u128>> {
   <const N extends bigint>(n: InRange<N, "0", "340282366920938463463374607431768211455">): u128;
 }
 
@@ -219,16 +219,16 @@ interface IntType<N extends number> {
   try_from(n: number): Result<N, string>;
 }
 
-interface I8 extends Prettify<IntType<i8>> {
+export interface I8 extends Prettify<IntType<i8>> {
   <const N extends number>(n: InRange<N, "128", "127">): i8;
 }
-interface I16 extends Prettify<IntType<i16>> {
+export interface I16 extends Prettify<IntType<i16>> {
   <const N extends number>(n: InRange<N, "32768", "32767">): i16;
 }
-interface I32 extends Prettify<IntType<i32>> {
+export interface I32 extends Prettify<IntType<i32>> {
   <const N extends number>(n: InRange<N, "2147483648", "2147483647">): i32;
 }
-interface ISize extends Prettify<IntType<isize>> {
+export interface ISize extends Prettify<IntType<isize>> {
   <const N extends number>(n: InRange<N, "2147483648", "2147483647">): isize;
 }
 
@@ -240,10 +240,10 @@ interface BigIntType<N extends bigint> {
   is(n: bigint): n is N;
   try_from(n: bigint): Result<N, string>;
 }
-interface I64 extends Prettify<BigIntType<i64>> {
+export interface I64 extends Prettify<BigIntType<i64>> {
   <const N extends bigint>(n: InRange<N, "9223372036854775808", "9223372036854775807">): i64;
 }
-interface I128 extends Prettify<BigIntType<i128>> {
+export interface I128 extends Prettify<BigIntType<i128>> {
   <const N extends bigint>(
     n: InRange<
       N,
@@ -361,10 +361,10 @@ interface FloatType<F extends number> extends FloatConstants<F> {
   try_from(n: number): Result<F, string>;
 }
 
-interface F32 extends Prettify<FloatType<f32>> {
+export interface F32 extends Prettify<FloatType<f32>> {
   <const N extends number>(n: number extends N ? N : F32Ok<N> extends true ? N : never): f32;
 }
-interface F64 extends Prettify<FloatType<f64>> {
+export interface F64 extends Prettify<FloatType<f64>> {
   <const N extends number>(n: N): f64;
 }
 
