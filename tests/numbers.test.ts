@@ -7,6 +7,7 @@ function Tuple<const T extends unknown[]>(...args: T): T {
 }
 
 describe("Sized numbers", () => {
+  f32(1e20);
   const unsigned_types_and_edges = Tuple(
     Tuple(u8, -1, 256),
     Tuple(u16, -1, 65_536),
@@ -105,8 +106,12 @@ describe("Sized numbers", () => {
       // Safe in-range values
       expect(fn.is(fn.MIN_POSITIVE)).toBe(true);
       expect(fn.is(1e20)).toBe(true);
+      expect(fn.is(0.1)).toBe(true);
       expect(fn.is(0)).toBe(true);
-      expect(fn.is(fn.MAX + 0.9)).toBe(true); // 90% of max
+      expect(fn.is(fn.MAX)).toBe(true);
+      expect(fn.is(fn.MIN)).toBe(true);
+      // rounds down to MAX, so it does not overflow (same as Rust)
+      expect(fn.is(3.4028235e38)).toBe(true);
       // out-of-range check
       expect(fn.is(min_edge)).toBe(false);
       expect(fn.is(max_edge)).toBe(false);
@@ -150,7 +155,8 @@ describe("Sized numbers", () => {
       // Safe in-range values
       expect(fn.try_from(fn.MIN_POSITIVE)).toEqual(Result.Ok(fn.MIN_POSITIVE));
       expect(fn.try_from(1e10)).toEqual(Result.Ok(1e10));
-      expect(fn.try_from(1e20)).toEqual(Result.Ok(Math.fround(1e20)));
+      expect(fn.try_from(1e20)).toEqual(Result.Ok(1e20));
+      expect(fn.try_from(0.1)).toEqual(Result.Ok(0.1));
       expect(fn.try_from(0)).toEqual(Result.Ok(0));
       expect(fn.try_from(fn.MAX + 0.9)).toEqual(Result.Ok(fn.MAX + 0.9)); // 90% of max
 
@@ -158,6 +164,16 @@ describe("Sized numbers", () => {
       expect(fn.try_from(min_edge).is_err()).toEqual(true);
       expect(fn.try_from(max_edge).is_err()).toEqual(true);
     }
+  });
+  test("floats are bounds only: the value is returned unchanged", () => {
+    expect(f32(0.1)).toBe(0.1);
+    expect(f32(1e20)).toBe(1e20);
+    expect(f32(3.4028235e38)).toBe(3.4028235e38);
+    expect(f32.try_from(0.1).unwrap()).toBe(0.1);
+    expect(f32.try_from(1e20).unwrap()).toBe(1e20);
+    expect(f32.try_from(4e38).is_err()).toBe(true);
+    expect(f64(0.1)).toBe(0.1);
+    expect(f64.try_from(0.1).unwrap()).toBe(0.1);
   });
   test("Wrong runtime types: a 'number' where a 'bigint' is expected, a string, 'NaN'", () => {
     // @ts-expect-error

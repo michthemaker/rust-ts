@@ -318,6 +318,8 @@ export const i128: I128 = object_assign(
 );
 
 // ------------------------------------------------------------------- floats
+// Bounds only: every float is still a plain JS number (an f64) and is never
+// rounded or changed, so f32(0.1) gives back 0.1. Precision is not emulated.
 // f64 accepts any number literal. f32 rejects literals above ~3.4028235e38
 // (Rust's `overflowing_literals`). Big literals print as "d.ddde+NN", so we
 // compare the exponent first, then the mantissa digits. The f32 limit is an
@@ -355,9 +357,9 @@ interface FloatConstants<F extends number> {
 }
 
 interface FloatType<F extends number> extends FloatConstants<F> {
-  /** true for any number whose rounded value does not overflow. NaN and +-Infinity are valid floats. */
+  /** true for any number that does not overflow this type. NaN and +-Infinity are valid floats. */
   is(n: number): n is F;
-  /** Ok(rounded value), or Err if a finite number overflows this type. */
+  /** Ok(n) unchanged, or Err if a finite number overflows this type. */
   try_from(n: number): Result<F, string>;
 }
 
@@ -370,7 +372,9 @@ export interface F64 extends Prettify<FloatType<f64>> {
 
 function float_type<F extends number>(
   limits: { max: number; min_positive: number; epsilon: number },
-  round: (n: number) => number, // Math.fround for f32, identity for f64
+  // Math.fround for f32, identity for f64. Only used to detect overflow (a finite
+  // number overflows when rounding it gives +-Infinity); values are never rounded.
+  round: (n: number) => number,
 ): FloatType<F> {
   const is = (n: number): n is F =>
     typeof n === "number" && (!Number.isFinite(n) || Number.isFinite(round(n)));
@@ -384,28 +388,29 @@ function float_type<F extends number>(
     NAN: NaN as F,
     is,
     try_from(n: number): Result<F, string> {
-      return is(n)
-        ? Result.Ok(round(n) as F)
-        : Result.Err("out of range floating point conversion attempted");
+      return is(n) ? Result.Ok(n) : Result.Err("out of range floating point conversion attempted");
     },
   };
 }
 
-export const f32: F32 = object_assign(
-  (n: number): f32 => {
-    if (!(typeof n === "number" && (!Number.isFinite(n) || Number.isFinite(Math.fround(n)))))
-      throw new Error(`literal out of range for f32: ${n}`);
-    return Math.fround(n) as f32;
+const f32_type = float_type<f32>(
+  {
+    max: 3.4028234663852886e38,
+    min_positive: 1.1754943508222875e-38,
+    epsilon: 1.1920928955078125e-7,
   },
-  float_type<f32>(
-    {
-      max: 3.4028234663852886e38,
-      min_positive: 1.1754943508222875e-38,
-      epsilon: 1.1920928955078125e-7,
-    },
-    Math.fround,
-  ),
+  Math.fround,
 );
+
+/**
+ * Bounds only: the value stays a plain JS number and is returned unchanged (f32(0.1) is 0.1).
+ * Math.fround is used only to detect overflow, following Rust's rule that a value overflows
+ * when it would round to +-Infinity. f32 precision is not emulated.
+ */
+export const f32: F32 = object_assign((n: number): f32 => {
+  if (!f32_type.is(n)) throw new Error(`literal out of range for f32: ${n}`);
+  return n;
+}, f32_type);
 
 export const f64: F64 = object_assign(
   (n: number): f64 => {
