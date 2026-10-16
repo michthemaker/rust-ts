@@ -11,7 +11,7 @@ export type Float<K extends string> = number & { readonly __num?: K };
 // Compares decimal strings, so the cost is the number of digits (at most 39
 // for u128), not the number of legal values.
 
-type Chars<S extends string, A extends 0[] = []> = S extends `${string}${infer R}`
+export type Chars<S extends string, A extends 0[] = []> = S extends `${string}${infer R}`
   ? Chars<R, [...A, 0]>
   : A;
 

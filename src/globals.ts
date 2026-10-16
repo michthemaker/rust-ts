@@ -1,4 +1,5 @@
 import { pick } from "../lib/pick";
+import * as Decimals from "./decimal";
 import * as SizedNumbers from "./numbers";
 
 declare global {
@@ -22,6 +23,11 @@ declare global {
   const f32: SizedNumbers.F32;
   const f64: SizedNumbers.F64;
 
+  // decimal
+  const d32: Decimals.D32;
+  const d64: Decimals.D64;
+  const d128: Decimals.D128;
+
   // number types
   // uint
   type u8 = SizedNumbers.u8;
@@ -42,6 +48,11 @@ declare global {
   // float
   type f32 = SizedNumbers.f32;
   type f64 = SizedNumbers.f64;
+
+  // decimal
+  type d32<S extends number = number> = Decimals.d32<S>;
+  type d64<S extends number = number> = Decimals.d64<S>;
+  type d128<S extends number = number> = Decimals.d128<S>;
 }
 
 Object.assign(
@@ -63,4 +74,5 @@ Object.assign(
     "f32",
     "f64",
   ),
+  pick(Decimals, "d32", "d64", "d128"),
 );
