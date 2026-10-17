@@ -1,8 +1,13 @@
 import "../src/globals.ts";
 import { expect, test, describe } from "bun:test";
 import { Result } from "../src/result.ts";
+import { inspect } from "bun";
 
 function Tuple<const T extends unknown[]>(...args: T): T {
+  // be beefed up like fixedarray throw on unchecked index access in runtime too. don't extend slice, we won't even have private get, set, buf property that are destructured and passed to the underlying proxy for index access, throw on out of bounds too.
+  // print (...elements) like in rust.
+  // remove array methods from the return type
+  // this function makes a Tuple (from another file, like vec and fixedarray)
   return args;
 }
 
@@ -89,6 +94,13 @@ describe("Sized numbers", () => {
     expect(f32.is(4e38)).toBe(false);
   });
   describe("Decimals", () => {
+    const nums = Tuple(
+      d32("0.19999999"),
+      d128("1000.5693"),
+      d32("0.6667"),
+      d64("1000.02900"),
+      d64("1000.9200292"),
+    );
     test("decimal builds on max digits and max significant places", () => {
       for (const t of decimal_types_and_sizes) {
         const [fn, max_digits, , max_places, , all_nines] = t;
@@ -105,8 +117,65 @@ describe("Sized numbers", () => {
         expect(() => fn(digits_over_at_max_places as any)).toThrow(/literal out of range/i);
       }
     });
-  });
+    describe("Parsing and representation", () => {
+      test("The scale is kept", () => {
+        const price = d32("0.10000");
+        expect(price.scale).toBe(5);
+        expect(inspect(price)).toBe("d32(0.10000)");
+        expect(price.to_string()).toBe("0.10000");
+      });
+      test("Small mantissas pad correctly and negatives and zeros print right", () => {
+        const price = d32("0.05"),
+          discount = d32("-0.05");
+        expect(inspect(price)).toBe("d32(0.05)");
+        expect(inspect(discount)).toBe("d32(-0.05)");
+      });
+      test("'is' and 'try_from' agree with the constructor on every case", () => {
+        for (const t of decimal_types_and_sizes) {
+          const [fn, max_digits, over_digits, max_places, over_places] = t;
+          // good path
+          expect(() => fn(max_digits)).not.toThrow();
+          expect(fn.is(max_digits)).toBe(true);
+          expect(fn.try_from(max_digits).is_ok()).toBe(true);
 
+          expect(() => fn(max_places)).not.toThrow();
+          expect(fn.is(max_places)).toBe(true);
+          expect(fn.try_from(max_places).is_ok()).toBe(true);
+
+          // bad path
+
+          // @ts-expect-error
+          expect(() => fn(over_digits)).toThrow();
+          expect(fn.is(over_digits)).toBe(false);
+          expect(fn.try_from(over_digits).is_err()).toBe(true);
+
+          // @ts-expect-error
+          expect(() => fn(over_places)).toThrow();
+          expect(fn.is(over_places)).toBe(false);
+          expect(fn.try_from(over_places).is_err()).toBe(true);
+
+          // @ts-expect-error
+          expect(() => fn(1)).toThrow();
+          // @ts-expect-error
+          expect(fn.is(29)).toBe(false);
+          // @ts-expect-error
+          expect(fn.try_from(2920).is_err()).toBe(true);
+        }
+      });
+      test("The motivating case", () => {
+        expect(d32("0.3").add(d32("0.2")).eq(d32("0.5"))).toBe(true);
+      });
+    });
+    describe("Arithmethic methods", () => {
+      const [_1, _2, _3, _4, _5] = nums;
+      test("add methods", () => {
+        const max_sig_d32 = d32("0.99999999");
+        const _1 = d32("1.000");
+        expect(() => max_sig_d32.add(max_sig_d32)).toThrow(/result out of range/i);
+        expect();
+      });
+    });
+  });
   test("'.is' on the in-range and out-of-range sides", () => {
     for (const t_and_e of unsigned_types_and_edges) {
       const [fn, min_edge, max_edge] = t_and_e;
