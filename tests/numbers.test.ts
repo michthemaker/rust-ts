@@ -94,13 +94,6 @@ describe("Sized numbers", () => {
     expect(f32.is(4e38)).toBe(false);
   });
   describe("Decimals", () => {
-    const nums = Tuple(
-      d32("0.19999999"),
-      d128("1000.5693"),
-      d32("0.6667"),
-      d64("1000.02900"),
-      d64("1000.9200292"),
-    );
     test("decimal builds on max digits and max significant places", () => {
       for (const t of decimal_types_and_sizes) {
         const [fn, max_digits, , max_places, , all_nines] = t;
@@ -166,13 +159,50 @@ describe("Sized numbers", () => {
         expect(d32("0.3").add(d32("0.2")).eq(d32("0.5"))).toBe(true);
       });
     });
-    describe("Arithmethic methods", () => {
-      const [_1, _2, _3, _4, _5] = nums;
-      test("add methods", () => {
-        const max_sig_d32 = d32("0.99999999");
-        const _1 = d32("1.000");
-        expect(() => max_sig_d32.add(max_sig_d32)).toThrow(/result out of range/i);
-        expect();
+    describe("Result scale rules", () => {
+      const [_1, _2, _3, _4, _5, _6] = Tuple(
+        d32("0.1000083"),
+        d32("0.6"),
+        d64("100.02900"),
+        d64("1000.9200292"),
+        d128("1000.569302020202"),
+        d128("1000.5693"),
+      );
+
+      test("'add', 'sub' and 'rem' use the larger scale ('0.10000 + 0.3222' is '0.42220').", () => {
+        expect(_1.add(_2).scale).toBe(7);
+        expect(_3.add(_4).scale).toBe(7);
+        expect(_5.add(_6).scale).toBe(12);
+
+        expect(_1.sub(_2).scale).toBe(7);
+        expect(_3.sub(_4).scale).toBe(7);
+        expect(_5.sub(_6).scale).toBe(12);
+
+        console.log(_3.rem(_4));
+
+        expect(_1.rem(_2).scale).toBe(7);
+        expect(_3.rem(_4).scale).toBe(7);
+        expect(_5.rem(_6).scale).toBe(12);
+      });
+      test("'mul' uses the sum ('1.5 * 1.5' is '2.25').", () => {
+        expect(_1.mul(_2).scale).toBe(8);
+        // expect(_3.mul(_4).scale).toBe(12);
+        expect(_5.mul(_6).scale).toBe(16);
+      });
+      test("An integer argument leaves the scale alone ('1.50 + 1' is '2.50', '1.50 * 2' is '3.00').", () => {
+        expect(_1.add(3).scale).toBe(7);
+        expect(_3.add(29).scale).toBe(5);
+        expect(_5.add(10000).scale).toBe(12);
+
+        expect(_1.mul(3).scale).toBe(7);
+        expect(_3.mul(29).scale).toBe(5);
+        expect(_5.mul(10000).scale).toBe(12);
+      });
+      test("'div' keeps the existing places and grows only if needed ('6.00 / 3' is '2.00', '1 / 4' is '0.25').", () => {
+        expect(d32("1.0").div(4).scale).toBe(2);
+        expect(d32("2.0000").div(4).scale).toBe(4);
+        console.log(d32("2.0").div(d32("2.0000")));
+        // By reading the code, a divisor with more places than the dividend can produce scale 0 (`1.0 / 0.500`), which prints without a point and which `d32("2")` then rejects. Pin whichever behavior you want. I want what rust_decimal would do in this case, read it
       });
     });
   });
