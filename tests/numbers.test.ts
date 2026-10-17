@@ -7,7 +7,6 @@ function Tuple<const T extends unknown[]>(...args: T): T {
 }
 
 describe("Sized numbers", () => {
-  f32(1e20);
   const unsigned_types_and_edges = Tuple(
     Tuple(u8, -1, 256),
     Tuple(u16, -1, 65_536),
@@ -26,6 +25,27 @@ describe("Sized numbers", () => {
       i128,
       -170_141_183_460_469_231_731_687_303_715_884_105_729n,
       170_141_183_460_469_231_731_687_303_715_884_105_728n,
+    ),
+  );
+  const decimal_types_and_sizes = Tuple(
+    Tuple(d32, "9999999.9", "99999999.9", "0.00000001", "0.000000001", "0.99999999", "1.00000000"),
+    Tuple(
+      d64,
+      "999999999999999.9",
+      "9999999999999999.9",
+      "0.0000000000000001",
+      "0.00000000000000001",
+      "0.9999999999999999",
+      "1.0000000000000000",
+    ),
+    Tuple(
+      d128,
+      "999999999999999999999999999.9",
+      "9999999999999999999999999999.9",
+      "0.0000000000000000000000000001",
+      "0.00000000000000000000000000001",
+      "0.9999999999999999999999999999",
+      "1.0000000000000000000000000000",
     ),
   );
   const float_types_and_edges = Tuple(Tuple(f32, -3.4028236e38, 3.4028236e38));
@@ -68,6 +88,25 @@ describe("Sized numbers", () => {
     // Large number that overflows f32:
     expect(f32.is(4e38)).toBe(false);
   });
+  describe("Decimals", () => {
+    test("decimal builds on max digits and max significant places", () => {
+      for (const t of decimal_types_and_sizes) {
+        const [fn, max_digits, , max_places, , all_nines] = t;
+        expect(() => fn(max_digits)).not.toThrow();
+        expect(() => fn(max_places)).not.toThrow();
+        expect(() => fn(all_nines)).not.toThrow();
+      }
+    });
+    test("decimal types fails at edges", () => {
+      for (const t of decimal_types_and_sizes) {
+        const [fn, , over_digits, , over_places, , digits_over_at_max_places] = t;
+        expect(() => fn(over_digits as any)).toThrow();
+        expect(() => fn(over_places as any)).toThrow(/literal out of range/i);
+        expect(() => fn(digits_over_at_max_places as any)).toThrow(/literal out of range/i);
+      }
+    });
+  });
+
   test("'.is' on the in-range and out-of-range sides", () => {
     for (const t_and_e of unsigned_types_and_edges) {
       const [fn, min_edge, max_edge] = t_and_e;

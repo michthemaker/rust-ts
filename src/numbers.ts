@@ -495,8 +495,23 @@ export interface Decimal<K extends DecimalKind = DecimalKind, S extends number =
   eq<const N extends IntLike>(other: IntArg<N>): boolean;
 }
 
+/**
+ * Exact decimal with up to 8 significant digits and 8 decimal places.
+ *
+ * @remarks `S` is the scale: `d32<2>` is like `1.50`.
+ */
 export interface d32<S extends number = number> extends Prettify<Decimal<"d32", S>> {}
+/**
+ * Exact decimal with up to 16 significant digits and 16 decimal places.
+ *
+ * @remarks `S` is the scale: `d64<2>` is like `1.50`.
+ */
 export interface d64<S extends number = number> extends Prettify<Decimal<"d64", S>> {}
+/**
+ * Exact decimal with up to 28 significant digits and 28 decimal places.
+ *
+ * @remarks `S` is the scale: `d128<2>` is like `1.50`.
+ */
 export interface d128<S extends number = number> extends Prettify<Decimal<"d128", S>> {}
 
 // digits = significant digits, scale = digits after the point. Both limits apply on their
@@ -870,6 +885,36 @@ function decimal_type<K extends DecimalKind>(kind: K, limits: Limits) {
   });
 }
 
+/**
+ * Builds a `d32` from a string like `"1.50"`.
+ *
+ * @remarks Digits, a `.`, then digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
+ * @throws If the string is invalid or over the limits.
+ * @example
+ * ```ts
+ * const price = d32("1.50");
+ * ```
+ */
 export const d32 = decimal_type("d32", D32_LIMITS) as D32;
+/**
+ * Builds a `d64` from a string like `"1.50"`.
+ *
+ * @remarks Digits, a `.`, then digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
+ * @throws If the string is invalid or over the limits.
+ * @example
+ * ```ts
+ * const price = d64("1.50");
+ * ```
+ */
 export const d64 = decimal_type("d64", D64_LIMITS) as D64;
+/**
+ * Builds a `d128` from a string like `"1.50"`.
+ *
+ * @remarks Digits, a `.`, then digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
+ * @throws If the string is invalid or over the limits.
+ * @example
+ * ```ts
+ * const price = d128("1.50");
+ * ```
+ */
 export const d128 = decimal_type("d128", D128_LIMITS) as D128;
