@@ -253,47 +253,47 @@ describe("Sized numbers", () => {
       const [fn, min_edge, max_edge] = t_and_e;
       if (typeof min_edge === "bigint" && typeof max_edge === "bigint") {
         // in-range check
-        expect(fn.try_from(min_edge + 5n)).toEqual(Result.Ok(min_edge + 5n));
+        expect(fn.try_from(min_edge + 5n)).to_equal(Result.Ok(min_edge + 5n));
         // out-of-range check
-        expect(fn.try_from(min_edge).is_err()).toEqual(true);
-        expect(fn.try_from(max_edge).is_err()).toEqual(true);
+        expect(fn.try_from(min_edge).is_err()).to_equal(true);
+        expect(fn.try_from(max_edge).is_err()).to_equal(true);
       } else {
         // in-range check
-        expect(fn.try_from(min_edge + 5)).toEqual(Result.Ok(min_edge + 5));
+        expect(fn.try_from(min_edge + 5)).to_equal(Result.Ok(min_edge + 5));
         // out-of-range check
-        expect(fn.try_from(min_edge).is_err()).toEqual(true);
-        expect(fn.try_from(max_edge).is_err()).toEqual(true);
+        expect(fn.try_from(min_edge).is_err()).to_equal(true);
+        expect(fn.try_from(max_edge).is_err()).to_equal(true);
       }
     }
     for (const t_and_e of signed_types_and_edges) {
       const [fn, min_edge, max_edge] = t_and_e;
       if (typeof min_edge === "bigint" && typeof max_edge === "bigint") {
         // in-range check
-        expect(fn.try_from(min_edge + 5n)).toEqual(Result.Ok(min_edge + 5n));
+        expect(fn.try_from(min_edge + 5n)).to_equal(Result.Ok(min_edge + 5n));
         // out-of-range check
-        expect(fn.try_from(min_edge).is_err()).toEqual(true);
-        expect(fn.try_from(max_edge).is_err()).toEqual(true);
+        expect(fn.try_from(min_edge).is_err()).to_equal(true);
+        expect(fn.try_from(max_edge).is_err()).to_equal(true);
       } else {
         // in-range check
-        expect(fn.try_from(min_edge + 5)).toEqual(Result.Ok(min_edge + 5));
+        expect(fn.try_from(min_edge + 5)).to_equal(Result.Ok(min_edge + 5));
         // out-of-range check
-        expect(fn.try_from(min_edge).is_err()).toEqual(true);
-        expect(fn.try_from(max_edge).is_err()).toEqual(true);
+        expect(fn.try_from(min_edge).is_err()).to_equal(true);
+        expect(fn.try_from(max_edge).is_err()).to_equal(true);
       }
     }
     for (const t_and_e of float_types_and_edges) {
       const [fn, min_edge, max_edge] = t_and_e;
       // Safe in-range values
-      expect(fn.try_from(fn.MIN_POSITIVE)).toEqual(Result.Ok(fn.MIN_POSITIVE));
-      expect(fn.try_from(1e10)).toEqual(Result.Ok(1e10));
-      expect(fn.try_from(1e20)).toEqual(Result.Ok(1e20));
-      expect(fn.try_from(0.1)).toEqual(Result.Ok(0.1));
-      expect(fn.try_from(0)).toEqual(Result.Ok(0));
-      expect(fn.try_from(fn.MAX + 0.9)).toEqual(Result.Ok(fn.MAX + 0.9)); // 90% of max
+      expect(fn.try_from(fn.MIN_POSITIVE)).to_equal(Result.Ok(fn.MIN_POSITIVE));
+      expect(fn.try_from(1e10)).to_equal(Result.Ok(1e10));
+      expect(fn.try_from(1e20)).to_equal(Result.Ok(1e20));
+      expect(fn.try_from(0.1)).to_equal(Result.Ok(0.1));
+      expect(fn.try_from(0)).to_equal(Result.Ok(0));
+      expect(fn.try_from(fn.MAX + 0.9)).to_equal(Result.Ok(fn.MAX + 0.9)); // 90% of max
 
       // out-of-range check
-      expect(fn.try_from(min_edge).is_err()).toEqual(true);
-      expect(fn.try_from(max_edge).is_err()).toEqual(true);
+      expect(fn.try_from(min_edge).is_err()).to_equal(true);
+      expect(fn.try_from(max_edge).is_err()).to_equal(true);
     }
   });
   test("floats are bounds only: the value is returned unchanged", () => {

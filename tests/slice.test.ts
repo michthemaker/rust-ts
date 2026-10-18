@@ -19,8 +19,8 @@ function middle() {
 }
 
 function expect_outside_untouched(buf: number[]) {
-  expect(buf.slice(0, 3)).toEqual([0, 1, 2]);
-  expect(buf.slice(7)).toEqual([7, 8, 9]);
+  expect(buf.slice(0, 3)).to_equal([0, 1, 2]);
+  expect(buf.slice(7)).to_equal([7, 8, 9]);
 }
 
 describe("Slice<T>", () => {
@@ -29,7 +29,7 @@ describe("Slice<T>", () => {
       const my_arr = [4, 6, new OnceLock(), new OnceLock()];
       const my_slice = new Slice(my_arr, 2, my_arr.length - 2);
       console.log(my_slice);
-      expect(my_arr[2]).toEqual(my_slice[0]);
+      expect(my_arr[2]).to_equal(my_slice[0]);
     });
     test("Write through one view is visible in the owner and in every overlapping view.", () => {
       const my_arr = [4, 6, new OnceLock(), new OnceLock()];
@@ -85,10 +85,10 @@ describe("Slice<T>", () => {
   describe("Empty Slice and boundary inputs, for every method", () => {
     test("first, last, split_first and split_last on an empty slice.", () => {
       const my_slice = new Slice([], 0, 0);
-      expect(my_slice.first().is_none()).toEqual(true);
-      expect(my_slice.last().is_none()).toEqual(true);
-      expect(my_slice.split_first().is_none()).toEqual(true);
-      expect(my_slice.split_last().is_none()).toEqual(true);
+      expect(my_slice.first().is_none()).to_equal(true);
+      expect(my_slice.last().is_none()).to_equal(true);
+      expect(my_slice.split_first().is_none()).to_equal(true);
+      expect(my_slice.split_last().is_none()).to_equal(true);
     });
 
     test("sort, reverse, fill on empty", () => {
@@ -96,16 +96,16 @@ describe("Slice<T>", () => {
       empty.sort();
       empty.reverse();
       empty.fill(1);
-      expect(empty.to_array()).toEqual([]);
+      expect(empty.to_array()).to_equal([]);
     });
 
     test("sort, reverse, fill on a single element", () => {
       const one = make([5]);
       one.sort();
       one.reverse();
-      expect(one.to_array()).toEqual([5]);
+      expect(one.to_array()).to_equal([5]);
       one.fill(9);
-      expect(one.to_array()).toEqual([9]);
+      expect(one.to_array()).to_equal([9]);
     });
 
     test("rotate_* on empty: 0 is fine, anything larger panics", () => {
@@ -120,20 +120,20 @@ describe("Slice<T>", () => {
       const one = make([5]);
       one.rotate_left(1);
       one.rotate_right(1);
-      expect(one.to_array()).toEqual([5]);
+      expect(one.to_array()).to_equal([5]);
       expect(() => one.rotate_left(2)).toThrow();
       expect(() => one.rotate_right(2)).toThrow();
     });
 
     test("binary_search on empty is Err(0)", () => {
-      expect(make<number>([]).binary_search(3)).toEqual(Result.Err(0));
+      expect(make<number>([]).binary_search(3)).to_equal(Result.Err(0));
     });
 
     test("binary_search on a single element", () => {
       const one = make([5]);
-      expect(one.binary_search(5)).toEqual(Result.Ok(0));
-      expect(one.binary_search(1)).toEqual(Result.Err(0));
-      expect(one.binary_search(9)).toEqual(Result.Err(1));
+      expect(one.binary_search(5)).to_equal(Result.Ok(0));
+      expect(one.binary_search(1)).to_equal(Result.Err(0));
+      expect(one.binary_search(9)).to_equal(Result.Err(1));
     });
   });
 
@@ -142,36 +142,36 @@ describe("Slice<T>", () => {
     const arrays = (it: IterableIterator<Slice<number>>) => [...it].map((s) => s.to_array());
 
     test("size larger than len", () => {
-      expect(arrays(items().windows(5))).toEqual([]);
-      expect(arrays(items().chunks(5))).toEqual([[1, 2, 3]]);
-      expect(arrays(items().chunks_exact(5))).toEqual([]);
+      expect(arrays(items().windows(5))).to_equal([]);
+      expect(arrays(items().chunks(5))).to_equal([[1, 2, 3]]);
+      expect(arrays(items().chunks_exact(5))).to_equal([]);
     });
 
     test("size equal to len", () => {
-      expect(arrays(items().windows(3))).toEqual([[1, 2, 3]]);
-      expect(arrays(items().chunks(3))).toEqual([[1, 2, 3]]);
-      expect(arrays(items().chunks_exact(3))).toEqual([[1, 2, 3]]);
+      expect(arrays(items().windows(3))).to_equal([[1, 2, 3]]);
+      expect(arrays(items().chunks(3))).to_equal([[1, 2, 3]]);
+      expect(arrays(items().chunks_exact(3))).to_equal([[1, 2, 3]]);
     });
 
     test("size 1", () => {
-      expect(arrays(items().windows(1))).toEqual([[1], [2], [3]]);
-      expect(arrays(items().chunks(1))).toEqual([[1], [2], [3]]);
-      expect(arrays(items().chunks_exact(1))).toEqual([[1], [2], [3]]);
+      expect(arrays(items().windows(1))).to_equal([[1], [2], [3]]);
+      expect(arrays(items().chunks(1))).to_equal([[1], [2], [3]]);
+      expect(arrays(items().chunks_exact(1))).to_equal([[1], [2], [3]]);
     });
 
     test("empty slice yields nothing", () => {
-      expect(arrays(make<number>([]).windows(1))).toEqual([]);
-      expect(arrays(make<number>([]).chunks(1))).toEqual([]);
-      expect(arrays(make<number>([]).chunks_exact(1))).toEqual([]);
+      expect(arrays(make<number>([]).windows(1))).to_equal([]);
+      expect(arrays(make<number>([]).chunks(1))).to_equal([]);
+      expect(arrays(make<number>([]).chunks_exact(1))).to_equal([]);
     });
   });
 
   describe("split_at and split_at_checked", () => {
     test("split_at 0 and len", () => {
       const [a, b] = make([1, 2, 3]).split_at(0);
-      expect([a.to_array(), b.to_array()]).toEqual([[], [1, 2, 3]]);
+      expect([a.to_array(), b.to_array()]).to_equal([[], [1, 2, 3]]);
       const [c, d] = make([1, 2, 3]).split_at(3);
-      expect([c.to_array(), d.to_array()]).toEqual([[1, 2, 3], []]);
+      expect([c.to_array(), d.to_array()]).to_equal([[1, 2, 3], []]);
     });
 
     test("split_at len + 1 and negative panic", () => {
@@ -192,7 +192,7 @@ describe("Slice<T>", () => {
       const [left, right] = make(buf).split_at(2);
       left.fill(0);
       right.reverse();
-      expect(buf).toEqual([0, 0, 4, 3]);
+      expect(buf).to_equal([0, 0, 4, 3]);
     });
   });
 
@@ -266,15 +266,15 @@ describe("Slice<T>", () => {
   describe("iteration", () => {
     test("iter and Symbol.iterator agree, for..of and spread work", () => {
       const s = make([1, 2, 3]);
-      expect([...s.iter()]).toEqual([1, 2, 3]);
-      expect([...s]).toEqual([1, 2, 3]);
+      expect([...s.iter()]).to_equal([1, 2, 3]);
+      expect([...s]).to_equal([1, 2, 3]);
       const seen: number[] = [];
       for (const x of s) seen.push(x);
-      expect(seen).toEqual([1, 2, 3]);
+      expect(seen).to_equal([1, 2, 3]);
     });
 
     test("iteration stays inside the window", () => {
-      expect([...make([0, 1, 2, 3, 4], 1, 3)]).toEqual([1, 2, 3]);
+      expect([...make([0, 1, 2, 3, 4], 1, 3)]).to_equal([1, 2, 3]);
     });
 
     test("windows / chunks / chunks_exact counts", () => {
@@ -288,16 +288,16 @@ describe("Slice<T>", () => {
       for (let chunk of s.chunks(3)) {
         console.log(chunk);
       }
-      expect(chunks).toEqual([[1, 2, 3], [4, 5, 6], [7]]); // trailing partial chunk
+      expect(chunks).to_equal([[1, 2, 3], [4, 5, 6], [7]]); // trailing partial chunk
       const exact = [...s.chunks_exact(3)].map((c) => c.to_array());
-      expect(exact).toEqual([
+      expect(exact).to_equal([
         [1, 2, 3],
         [4, 5, 6],
       ]); // remainder dropped
     });
 
     test("windows overlap by size - 1", () => {
-      expect([...make([1, 2, 3, 4]).windows(2)].map((w) => w.to_array())).toEqual([
+      expect([...make([1, 2, 3, 4]).windows(2)].map((w) => w.to_array())).to_equal([
         [1, 2],
         [2, 3],
         [3, 4],
@@ -309,11 +309,11 @@ describe("Slice<T>", () => {
       const [first_chunk] = make(buf).chunks(2);
       first_chunk[0] = 99;
       first_chunk.swap(0, 1);
-      expect(buf).toEqual([2, 99, 3, 4]);
+      expect(buf).to_equal([2, 99, 3, 4]);
 
       const buf2 = [1, 2, 3, 4];
       for (const w of make(buf2).windows(2)) w.fill(0);
-      expect(buf2).toEqual([0, 0, 0, 0]);
+      expect(buf2).to_equal([0, 0, 0, 0]);
     });
   });
 
@@ -322,76 +322,76 @@ describe("Slice<T>", () => {
       const buf = [0, 1, 2, 9, 4, 7, 5, 7, 8, 9];
       const view = new Slice(buf, 3, 4);
       view.sort();
-      expect(buf).toEqual([0, 1, 2, 4, 5, 7, 9, 7, 8, 9]);
+      expect(buf).to_equal([0, 1, 2, 4, 5, 7, 9, 7, 8, 9]);
     });
 
     test("reverse", () => {
       const { buf, view } = middle();
       view.reverse();
-      expect(buf).toEqual([0, 1, 2, 6, 5, 4, 3, 7, 8, 9]);
+      expect(buf).to_equal([0, 1, 2, 6, 5, 4, 3, 7, 8, 9]);
       expect_outside_untouched(buf);
     });
 
     test("fill", () => {
       const { buf, view } = middle();
       view.fill(-1);
-      expect(buf).toEqual([0, 1, 2, -1, -1, -1, -1, 7, 8, 9]);
+      expect(buf).to_equal([0, 1, 2, -1, -1, -1, -1, 7, 8, 9]);
       expect_outside_untouched(buf);
     });
 
     test("fill_with", () => {
       const { buf, view } = middle();
       view.fill_with(() => -1);
-      expect(buf.slice(3, 7)).toEqual([-1, -1, -1, -1]);
+      expect(buf.slice(3, 7)).to_equal([-1, -1, -1, -1]);
       expect_outside_untouched(buf);
     });
 
     test("rotate_left / rotate_right", () => {
       const { buf, view } = middle();
       view.rotate_left(1);
-      expect(buf.slice(3, 7)).toEqual([4, 5, 6, 3]);
+      expect(buf.slice(3, 7)).to_equal([4, 5, 6, 3]);
       expect_outside_untouched(buf);
       view.rotate_right(1);
-      expect(buf.slice(3, 7)).toEqual([3, 4, 5, 6]);
+      expect(buf.slice(3, 7)).to_equal([3, 4, 5, 6]);
       expect_outside_untouched(buf);
     });
 
     test("swap", () => {
       const { buf, view } = middle();
       view.swap(0, 3);
-      expect(buf.slice(3, 7)).toEqual([6, 4, 5, 3]);
+      expect(buf.slice(3, 7)).to_equal([6, 4, 5, 3]);
       expect_outside_untouched(buf);
     });
 
     test("copy_from_slice", () => {
       const { buf, view } = middle();
       view.copy_from_slice([10, 11, 12, 13]);
-      expect(buf.slice(3, 7)).toEqual([10, 11, 12, 13]);
+      expect(buf.slice(3, 7)).to_equal([10, 11, 12, 13]);
       expect_outside_untouched(buf);
     });
 
     test("reverse on odd and even lengths", () => {
-      expect(make([1, 2, 3]).to_array().reverse()).toEqual([3, 2, 1]);
+      expect(make([1, 2, 3]).to_array().reverse()).to_equal([3, 2, 1]);
       const odd = make([1, 2, 3]);
       odd.reverse();
-      expect(odd.to_array()).toEqual([3, 2, 1]);
+      expect(odd.to_array()).to_equal([3, 2, 1]);
       const even = make([1, 2, 3, 4]);
       even.reverse();
-      expect(even.to_array()).toEqual([4, 3, 2, 1]);
+      expect(even.to_array()).to_equal([4, 3, 2, 1]);
     });
 
     test("rotate by 0, by len, and by more than len", () => {
       const s = make([1, 2, 3, 4]);
       s.rotate_left(0);
-      expect(s.to_array()).toEqual([1, 2, 3, 4]);
+      expect(s.to_array()).to_equal([1, 2, 3, 4]);
       s.rotate_left(4);
-      expect(s.to_array()).toEqual([1, 2, 3, 4]);
+      expect(s.to_array()).to_equal([1, 2, 3, 4]);
       s.rotate_right(0);
       s.rotate_right(4);
-      expect(s.to_array()).toEqual([1, 2, 3, 4]);
+      expect(s.to_array()).to_equal([1, 2, 3, 4]);
       expect(() => s.rotate_left(5)).toThrow();
       expect(() => s.rotate_right(5)).toThrow();
-      expect(s.to_array()).toEqual([1, 2, 3, 4]); // a panic leaves the data alone
+      expect(s.to_array()).to_equal([1, 2, 3, 4]); // a panic leaves the data alone
     });
 
     test("fill_with calls its closure len times, in index order", () => {
@@ -399,7 +399,7 @@ describe("Slice<T>", () => {
       let calls = 0;
       s.fill_with(() => calls++);
       expect(calls).toBe(4);
-      expect(s.to_array()).toEqual([0, 1, 2, 3]);
+      expect(s.to_array()).to_equal([0, 1, 2, 3]);
     });
 
     test("sort is stable", () => {
@@ -411,19 +411,19 @@ describe("Slice<T>", () => {
       ];
       const s = make(items);
       s.sort_by((x, y) => x.k - y.k);
-      expect(s.to_array().map((x) => x.id)).toEqual(["b", "d", "a", "c"]);
+      expect(s.to_array().map((x) => x.id)).to_equal(["b", "d", "a", "c"]);
     });
 
     test("default sort is numeric, not lexicographic", () => {
       const s = make([10, 9, 1, 100]);
       s.sort();
-      expect(s.to_array()).toEqual([1, 9, 10, 100]);
+      expect(s.to_array()).to_equal([1, 9, 10, 100]);
     });
 
     test("default sort on strings", () => {
       const s = make(["b", "c", "a"]);
       s.sort();
-      expect(s.to_array()).toEqual(["a", "b", "c"]);
+      expect(s.to_array()).to_equal(["a", "b", "c"]);
     });
 
     test("sort_by_key with ties keeps the original order", () => {
@@ -435,7 +435,7 @@ describe("Slice<T>", () => {
       ];
       const s = make(items);
       s.sort_by_key((x) => x.k);
-      expect(s.to_array().map((x) => x.id)).toEqual(["b", "d", "a", "c"]);
+      expect(s.to_array().map((x) => x.id)).to_equal(["b", "d", "a", "c"]);
     });
   });
 
@@ -506,18 +506,18 @@ describe("Slice<T>", () => {
     const sorted = () => make([1, 3, 5, 7, 9]);
 
     test("found item", () => {
-      expect(sorted().binary_search(5)).toEqual(Result.Ok(2));
-      expect(sorted().binary_search(1)).toEqual(Result.Ok(0));
-      expect(sorted().binary_search(9)).toEqual(Result.Ok(4));
+      expect(sorted().binary_search(5)).to_equal(Result.Ok(2));
+      expect(sorted().binary_search(1)).to_equal(Result.Ok(0));
+      expect(sorted().binary_search(9)).to_equal(Result.Ok(4));
     });
 
     test("missing item gives the insertion point", () => {
-      expect(sorted().binary_search(4)).toEqual(Result.Err(2));
+      expect(sorted().binary_search(4)).to_equal(Result.Err(2));
     });
 
     test("insertion at both ends", () => {
-      expect(sorted().binary_search(0)).toEqual(Result.Err(0));
-      expect(sorted().binary_search(10)).toEqual(Result.Err(5));
+      expect(sorted().binary_search(0)).to_equal(Result.Err(0));
+      expect(sorted().binary_search(10)).to_equal(Result.Err(5));
     });
 
     test("duplicates: any matching index is acceptable", () => {
@@ -530,15 +530,15 @@ describe("Slice<T>", () => {
     test("custom comparator", () => {
       const descending = make([9, 7, 5, 3, 1]);
       const cmp = (a: number, b: number) => b - a;
-      expect(descending.binary_search(5, cmp)).toEqual(Result.Ok(2));
-      expect(descending.binary_search(6, cmp)).toEqual(Result.Err(2));
+      expect(descending.binary_search(5, cmp)).to_equal(Result.Ok(2));
+      expect(descending.binary_search(6, cmp)).to_equal(Result.Err(2));
     });
 
     test("searches only the window", () => {
       const view = make([100, 1, 3, 5, 0], 1, 3);
-      expect(view.binary_search(5)).toEqual(Result.Ok(2));
-      expect(view.binary_search(100)).toEqual(Result.Err(3)); // not the 100 before the window
-      expect(view.binary_search(0)).toEqual(Result.Err(0)); // not the 0 after it
+      expect(view.binary_search(5)).to_equal(Result.Ok(2));
+      expect(view.binary_search(100)).to_equal(Result.Err(3)); // not the 100 before the window
+      expect(view.binary_search(0)).to_equal(Result.Err(0)); // not the 0 after it
     });
 
     test("search on an empty slice", () => {
@@ -571,9 +571,9 @@ describe("Slice<T>", () => {
     test("len and to_array reflect the fixed size", () => {
       const fa = new FixedArray("x", 4);
       expect(fa.len()).toBe(4);
-      expect(fa.to_array()).toEqual(["x", "x", "x", "x"]);
+      expect(fa.to_array()).to_equal(["x", "x", "x", "x"]);
       fa[2] = "y";
-      expect(fa.to_array()).toEqual(["x", "x", "y", "x"]);
+      expect(fa.to_array()).to_equal(["x", "x", "y", "x"]);
     });
 
     test("inherited Slice methods work on it", () => {
@@ -584,14 +584,14 @@ describe("Slice<T>", () => {
       expect(fa.last().unwrap()).toBe(3);
       expect(fa.contains(2)).toBe(true);
       fa.reverse();
-      expect(fa.to_array()).toEqual([3, 2, 1]);
+      expect(fa.to_array()).to_equal([3, 2, 1]);
     });
 
     test("for..of and spread work on it", () => {
       const fa = new FixedArray(1, 3);
       fa[1] = 2;
       fa[2] = 3;
-      expect([...fa]).toEqual([1, 2, 3]);
+      expect([...fa]).to_equal([1, 2, 3]);
     });
 
     test("a view split off it shares its buffer", () => {
@@ -599,7 +599,7 @@ describe("Slice<T>", () => {
       const [left, right] = fa.split_at(2);
       left.fill(1);
       right.fill(2);
-      expect(fa.to_array()).toEqual([1, 1, 2, 2]);
+      expect(fa.to_array()).to_equal([1, 1, 2, 2]);
     });
   });
 
@@ -622,10 +622,10 @@ describe("Slice<T>", () => {
     test("len and to_array reflect the vec size", () => {
       const strings = vec(["x", "x", "x", "x"]);
       expect(strings.len()).toBe(4);
-      expect(strings.to_array()).toEqual(["x", "x", "x", "x"]);
+      expect(strings.to_array()).to_equal(["x", "x", "x", "x"]);
       strings[2] = "y";
       console.log(strings.to_array());
-      expect(strings.to_array()).toEqual(["x", "x", "y", "x"]);
+      expect(strings.to_array()).to_equal(["x", "x", "y", "x"]);
     });
 
     test("inherited Slice methods work on it", () => {
@@ -636,14 +636,14 @@ describe("Slice<T>", () => {
       expect(nums.last().unwrap()).toBe(3);
       expect(nums.contains(2)).toBe(true);
       nums.reverse();
-      expect(nums.to_array()).toEqual([3, 2, 1]);
+      expect(nums.to_array()).to_equal([3, 2, 1]);
     });
 
     test("for..of and spread work on it", () => {
       const nums = vec([1, 1, 1]);
       nums[1] = 2;
       nums[2] = 3;
-      expect([...nums]).toEqual([1, 2, 3]);
+      expect([...nums]).to_equal([1, 2, 3]);
     });
 
     test("a view split off it shares its buffer", () => {
@@ -651,7 +651,7 @@ describe("Slice<T>", () => {
       const [left, right] = vec4.split_at(2);
       left.fill(1);
       right.fill(2);
-      expect(vec4.to_array()).toEqual([1, 1, 2, 2]);
+      expect(vec4.to_array()).to_equal([1, 1, 2, 2]);
     });
   });
 

@@ -85,7 +85,7 @@ describe("Vec<T>", () => {
   });
   test(".get call returns an Option<T>", () => {
     const my_nums = vec([new OnceLock(), 5]);
-    expect(my_nums.get(0).is_some()).toEqual(true);
+    expect(my_nums.get(0).is_some()).to_equal(true);
     console.log(my_nums.get(0));
   });
   test(".reserve throws on invalid `additional` argument", () => {
