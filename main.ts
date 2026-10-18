@@ -43,7 +43,6 @@ export function main() {
 
   console.log("-------");
   console.log(d32("2929.00").eq(d32("0.299")));
-  console.log(d32("2929.00").eq(d32("2929.00")));
   console.log(is_equal(vec([0, 0, 0, 0]), new FixedArray(29, 4)));
   console.log(is_equal(new FixedArray(29, 4), new FixedArray(29, 4)));
 
@@ -51,5 +50,12 @@ export function main() {
   console.log(is_equal(Option.None(), Option.None()));
 }
 
-const mine = new OnceLock();
+console.log(d32("2929.00").eq(d32("2929.00")));
+console.log(new OnceLock());
+const mine = new OnceLock<d32<1>>();
+mine.set(d32("3.0"));
+console.log(mine);
+const mine_2 = new OnceLock<d32<1>>();
+mine_2.set(d32("2.0"));
 console.log(is_equal(mine, new OnceLock()));
+console.log(is_equal(mine, mine_2));
