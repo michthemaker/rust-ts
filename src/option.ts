@@ -1,8 +1,9 @@
+import { is_equal, PartialEq } from "./cmp/partial_eq";
 import { Result } from "./result";
 
 export const HIDDEN_OPTION_TAG = "rust-ts::std::Option<T>";
 
-interface OptionMethods<T> {
+interface OptionMethods<T> extends PartialEq<Option<T>> {
   is_some(): this is Some<T>;
   is_none(): this is None;
   unwrap(): T;
@@ -74,6 +75,16 @@ class OptionImpl<T> implements OptionMethods<T> {
   }
   ok_or_else<E>(f: () => E) {
     return this.some ? Result.Ok(this.value!) : Result.Err(f());
+  }
+  eq(other: unknown): boolean {
+    if (Option.is_option(other)) {
+      if (other.is_some() && this.is_some() && is_equal(other.unwrap(), this.value)) return true;
+      else if (other.is_none() && this.is_none()) return true;
+      return false;
+    } else return false;
+  }
+  ne(other: unknown): boolean {
+    return !this.eq(other);
   }
 }
 
