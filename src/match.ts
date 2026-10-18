@@ -128,34 +128,20 @@ function match(value: any, config: any) {
     const { Ok, Err } = config as ResultArms<unknown, unknown, unknown>;
 
     // Explicit exhaustive match rules validation
-    if (value.is_ok()) {
-      if (typeof Ok === "function") return Ok(value.unwrap());
-    } else {
-      // @ts-expect-error
-      if (typeof Err === "function") return Err(value.unwrap_err());
-    }
-
-    // If it missed the standard fields, check for a wildcard arm
-    if (config[SYMBOL_WILDCARD] !== undefined) return config[SYMBOL_WILDCARD](value);
+    if (value.is_ok() && typeof Ok === "function") return Ok(value.unwrap());
+    if (value.is_err() && typeof Err === "function") return Err(value.unwrap_err());
 
     // Exact compilation-emulation error triggers
     if (Option.is_none(Ok)) throw new Error(`non-exhaustive patterns: \`Ok(_)\` not covered`);
     if (Option.is_none(Err)) throw new Error(`non-exhaustive patterns: \`Err(_)\` not covered`);
-    // @ts-expect-error
-    return value.is_ok() ? Ok(value.unwrap()) : Err(value.unwrap_err());
   }
 
   // handle Option.Some or Option.None
   else if (Option.is_option(value)) {
     const { Some, None } = config as OptionArms<unknown, unknown>;
 
-    if (value.is_some()) {
-      if (typeof Some === "function") return Some(value.unwrap());
-    } else {
-      if (typeof None === "function") return None();
-    }
-
-    if (config[SYMBOL_WILDCARD] !== undefined) return config[SYMBOL_WILDCARD](value);
+    if (value.is_some() && typeof Some === "function") return Some(value.unwrap());
+    if (value.is_none() && typeof None === "function") return None();
 
     if (Option.is_none(Some)) throw new Error(`non-exhaustive patterns: \`Some(_)\` not covered`);
     if (Option.is_none(None)) throw new Error(`non-exhaustive patterns: \`None()\` not covered`);

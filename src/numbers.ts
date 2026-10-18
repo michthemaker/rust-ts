@@ -1,4 +1,5 @@
 import { Prettify } from "../lib/types";
+import { match } from "./match";
 import { Result } from "./result";
 
 export type Int<K extends string> = number & { readonly __num?: K };
@@ -876,8 +877,14 @@ function parse_decimal<K extends DecimalKind>(
 function decimal_type<K extends DecimalKind>(kind: K, limits: Limits) {
   const construct = (s: string): Decimal<K> => {
     const parsed = parse_decimal(kind, limits, s);
-    if (parsed.is_err()) throw new Error(parsed.error);
-    return parsed.value;
+    return match(parsed, {
+      Err(err) {
+        throw new Error(err);
+      },
+      Ok(val) {
+        return val;
+      },
+    });
   };
   return Object.assign(construct, {
     is: (s: string): boolean => parse_decimal(kind, limits, s).is_ok(),
