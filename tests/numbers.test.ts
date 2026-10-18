@@ -2,14 +2,7 @@ import "../src/globals.ts";
 import { expect, test, describe } from "bun:test";
 import { Result } from "../src/result.ts";
 import { inspect } from "bun";
-
-function Tuple<const T extends unknown[]>(...args: T): T {
-  // be beefed up like fixedarray throw on unchecked index access in runtime too. don't extend slice, we won't even have private get, set, buf property that are destructured and passed to the underlying proxy for index access, throw on out of bounds too.
-  // print (...elements) like in rust.
-  // remove array methods from the return type
-  // this function makes a Tuple (from another file, like vec and fixedarray)
-  return args;
-}
+import { Tuple } from "../src/tuple.ts";
 
 describe("Sized numbers", () => {
   const unsigned_types_and_edges = Tuple(

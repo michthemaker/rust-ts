@@ -53,22 +53,22 @@ const Pattern: PatternInterface = {
   _: SYMBOL_WILDCARD,
   Some(val) {
     return define_pattern("rust-ts::std::Some<T>", (s) =>
-      Option.is_option(s) && s.is_some() && is_equal(val, s.value)
-        ? Option.Some([s.value])
+      Option.is_option(s) && s.is_some() && is_equal(val, s.unwrap())
+        ? Option.Some([s.unwrap()])
         : Option.None(),
     );
   },
   Ok(val) {
     return define_pattern("rust-ts::std::Ok<T, E>", (s) =>
-      Result.is_result(s) && s.is_ok() && is_equal(val, s.value)
-        ? Option.Some([s.value])
+      Result.is_result(s) && s.is_ok() && is_equal(val, s.unwrap())
+        ? Option.Some([s.unwrap()])
         : Option.None(),
     );
   },
   Err(val) {
     return define_pattern("rust-ts::std::Err<T, E>", (s) =>
-      Result.is_result(s) && s.is_err() && is_equal(val, s.error)
-        ? Option.Some([s.error])
+      Result.is_result(s) && s.is_err() && is_equal(val, s.unwrap_err())
+        ? Option.Some([s.unwrap_err()])
         : Option.None(),
     );
   },
@@ -129,9 +129,10 @@ function match(value: any, config: any) {
 
     // Explicit exhaustive match rules validation
     if (value.is_ok()) {
-      if (typeof Ok === "function") return Ok(value.value);
+      if (typeof Ok === "function") return Ok(value.unwrap());
     } else {
-      if (typeof Err === "function") return Err(value.error);
+      // @ts-expect-error
+      if (typeof Err === "function") return Err(value.unwrap_err());
     }
 
     // If it missed the standard fields, check for a wildcard arm
@@ -140,7 +141,8 @@ function match(value: any, config: any) {
     // Exact compilation-emulation error triggers
     if (Option.is_none(Ok)) throw new Error(`non-exhaustive patterns: \`Ok(_)\` not covered`);
     if (Option.is_none(Err)) throw new Error(`non-exhaustive patterns: \`Err(_)\` not covered`);
-    return value.is_ok() ? Ok(value.value) : Err(value.error);
+    // @ts-expect-error
+    return value.is_ok() ? Ok(value.unwrap()) : Err(value.unwrap_err());
   }
 
   // handle Option.Some or Option.None
@@ -148,7 +150,7 @@ function match(value: any, config: any) {
     const { Some, None } = config as OptionArms<unknown, unknown>;
 
     if (value.is_some()) {
-      if (typeof Some === "function") return Some(value.value);
+      if (typeof Some === "function") return Some(value.unwrap());
     } else {
       if (typeof None === "function") return None();
     }
