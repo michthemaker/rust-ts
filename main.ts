@@ -1,4 +1,4 @@
-import { is_equal } from "./src/cmp/is_equal.ts";
+import { is_equal } from "./src/cmp/partial_eq.ts";
 import "./src/globals.ts";
 import { match } from "./src/match.ts";
 import { Option } from "./src/option.ts";

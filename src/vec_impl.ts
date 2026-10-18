@@ -1,4 +1,4 @@
-import { is_equal } from "./cmp/is_equal";
+import { is_equal } from "./cmp/partial_eq";
 import { clone_of } from "../lib/clone";
 import { Option } from "./option";
 import { range } from "./range";
