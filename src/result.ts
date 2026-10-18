@@ -11,6 +11,16 @@ interface ResultMethods<T, E> {
   unwrap_err(): E;
   expect_err(msg: string): E;
   iter(): IterableIterator<Option<T>>;
+  /**
+   * Converts from Result<T, E> to Option<T>.
+   * Converts self into an Option<T>, and converting the error to None, if any.
+   */
+  ok(): Option<T>;
+  /**
+   * Converts from Result<T, E> to Option<E>.
+   * Converts self into an Option<E>, and discarding the success value, if any.
+   */
+  err(): Option<E>;
 }
 
 // @ts-ignore
@@ -24,12 +34,12 @@ const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 
 class ResultImpl<T, E> implements ResultMethods<T, E> {
   // we will leave these as private so that equality checkers can work
-  private ok: boolean;
+  private result_ok: boolean;
   private value: T | undefined;
   private error: E | undefined;
   [HIDDEN_RESULT_TAG] = true;
   constructor(ok: boolean, value_or_error: any) {
-    this.ok = ok;
+    this.result_ok = ok;
     if (ok === true) this.value = value_or_error;
     else this.error = value_or_error;
     Object.freeze(this);
@@ -43,10 +53,10 @@ class ResultImpl<T, E> implements ResultMethods<T, E> {
     }
   }
   is_ok(): this is Ok<T, E> {
-    return this.ok;
+    return this.result_ok;
   }
   is_err(): this is Err<T, E> {
-    return !this.ok;
+    return !this.result_ok;
   }
   *iter() {
     if (this.is_ok() as unknown as Ok<T, E>) {
@@ -54,23 +64,29 @@ class ResultImpl<T, E> implements ResultMethods<T, E> {
     } else yield Option.None();
   }
   unwrap(): T {
-    if (!this.ok) throw new Error(String(this.error));
+    if (!this.result_ok) throw new Error(String(this.error));
     return this.value!;
   }
   expect(msg: string): T {
-    if (!this.ok) throw new Error(`${msg}: ${this.error}`);
+    if (!this.result_ok) throw new Error(`${msg}: ${this.error}`);
     return this.value!;
   }
   unwrap_or(default_value: T): T {
-    return this.ok ? this.value! : default_value;
+    return this.result_ok ? this.value! : default_value;
   }
   unwrap_err(): E {
-    if (this.ok) throw new Error(String(this.value));
+    if (this.result_ok) throw new Error(String(this.value));
     return this.error!;
   }
   expect_err(msg: string): E {
-    if (this.ok) throw new Error(`${msg}: ${this.value}`);
+    if (this.result_ok) throw new Error(`${msg}: ${this.value}`);
     return this.error!;
+  }
+  ok(): Option<T> {
+    return this.result_ok === true ? Option.Some(this.value!) : Option.None();
+  }
+  err(): Option<E> {
+    return this.result_ok === false ? Option.Some(this.error!) : Option.None();
   }
 }
 

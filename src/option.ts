@@ -1,3 +1,5 @@
+import { Result } from "./result";
+
 export const HIDDEN_OPTION_TAG = "rust-ts::std::Option<T>";
 
 interface OptionMethods<T> {
@@ -7,6 +9,14 @@ interface OptionMethods<T> {
   expect(msg: string): T;
   unwrap_or(default_value: T): T;
   iter(): IterableIterator<T>;
+  /**
+   * Transforms the Option<T> into a Result<T, E>, mapping Some(v) to Ok(v) and None to Err(err).
+   */
+  ok_or<E>(err: E): Result<T, E>;
+  /**
+   * Transforms the Option<T> into a Result<T, E>, mapping Some(v) to Ok(v) and None to Err(err()).
+   */
+  ok_or_else<E>(err: () => E): Result<T, E>;
 }
 
 export interface Some<T> extends OptionMethods<T> {}
@@ -58,6 +68,12 @@ class OptionImpl<T> implements OptionMethods<T> {
   unwrap_or(default_value: T): T {
     // @ts-ignore
     return this.some ? this.value : default_value;
+  }
+  ok_or<E>(err: E) {
+    return this.some ? Result.Ok(this.value!) : Result.Err(err);
+  }
+  ok_or_else<E>(f: () => E) {
+    return this.some ? Result.Ok(this.value!) : Result.Err(f());
   }
 }
 

@@ -1,4 +1,5 @@
 import { Prettify } from "../lib/types";
+import { PartialEq } from "./cmp/partial_eq";
 import { match } from "./match";
 import { Result } from "./result";
 
@@ -696,10 +697,9 @@ type Operand = { readonly mantissa: bigint; readonly scale: number };
 
 // The method signatures are on the Decimal interface (they are too generic for the class
 // to implement), so the class only promises the plain members. `make` does the cast.
-class DecimalImpl<K extends DecimalKind, S extends number> implements Pick<
-  Decimal<K, S>,
-  "kind" | "scale" | "to_string" | "toJSON"
-> {
+class DecimalImpl<K extends DecimalKind, S extends number>
+  implements Pick<Decimal<K, S>, "kind" | "scale" | "to_string" | "toJSON">, PartialEq<any>
+{
   /** the digits as a signed whole number: "-1.50" has mantissa -150n */
   readonly #mantissa: bigint;
 
@@ -721,21 +721,30 @@ class DecimalImpl<K extends DecimalKind, S extends number> implements Pick<
   }
 
   /** other as a mantissa and a scale. Throws for another kind, a float, or anything else. */
-  #operand(other: unknown): Operand {
+  #try_operand(other: unknown): Result<Operand, string> {
     if (typeof other === "object" && other !== null && #mantissa in other) {
-      if (other.kind !== this.kind)
-        throw new TypeError(`cannot mix ${this.kind} with ${other.kind}`);
-      return { mantissa: other.#mantissa, scale: other.scale };
+      if (other.kind !== this.kind) return Result.Err(`cannot mix ${this.kind} with ${other.kind}`);
+      return Result.Ok({ mantissa: other.#mantissa, scale: other.scale });
     }
-    if (typeof other === "bigint") return { mantissa: other, scale: 0 };
+    if (typeof other === "bigint") return Result.Ok({ mantissa: other, scale: 0 });
     if (typeof other === "number") {
       if (!Number.isInteger(other))
-        throw new TypeError(
+        return Result.Err(
           `${this.kind} does not accept floats (${other}): pass an integer or another ${this.kind}`,
         );
-      return { mantissa: BigInt(other), scale: 0 };
+      return Result.Ok({ mantissa: BigInt(other), scale: 0 });
     }
-    throw new TypeError(`expected a ${this.kind} or an integer, got ${typeof other}`);
+    return Result.Err(`expected a ${this.kind} or an integer, got ${typeof other}`);
+  }
+
+  #operand(other: unknown) {
+    const operand_result = this.#try_operand(other);
+    return match(operand_result, {
+      Ok: (val) => val,
+      Err(err) {
+        throw new TypeError(err);
+      },
+    });
   }
 
   /** both mantissas rescaled to the larger of the two scales */
@@ -817,8 +826,19 @@ class DecimalImpl<K extends DecimalKind, S extends number> implements Pick<
   }
 
   eq(other: unknown): boolean {
-    const { a, b } = this.#align(this.#operand(other));
-    return a === b;
+    const operand = this.#try_operand(other);
+    const this_value = this;
+    return match(operand.ok(), {
+      Some(operand) {
+        const { a, b } = this_value.#align(operand);
+        return a === b;
+      },
+      None: () => false,
+    });
+  }
+
+  ne(other: unknown): boolean {
+    return !this.eq(other);
   }
 
   // Only the "string" hint (template literals, String(x)) works. Everything else
