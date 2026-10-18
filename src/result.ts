@@ -1,8 +1,9 @@
+import { is_equal, PartialEq } from "./cmp/partial_eq";
 import { Option } from "./option";
 
 export const HIDDEN_RESULT_TAG = "rust-ts::std::Result<T, E>";
 
-interface ResultMethods<T, E> {
+interface ResultMethods<T, E> extends PartialEq<Result<T, E>> {
   is_ok(): this is Ok<T, E>;
   is_err(): this is Err<T, E>;
   unwrap(): T;
@@ -87,6 +88,17 @@ class ResultImpl<T, E> implements ResultMethods<T, E> {
   }
   err(): Option<E> {
     return this.result_ok === false ? Option.Some(this.error!) : Option.None();
+  }
+  eq(other: unknown): boolean {
+    if (Result.is_result(other)) {
+      if (other.is_ok() && this.is_ok() && is_equal(other.unwrap(), this.value)) return true;
+      else if (other.is_err() && this.is_err() && is_equal(other.unwrap_err(), this.error))
+        return true;
+      return false;
+    } else return false;
+  }
+  ne(other: unknown): boolean {
+    return !this.eq(other);
   }
 }
 

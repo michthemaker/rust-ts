@@ -46,3 +46,5 @@ export function main() {
 }
 
 console.log(is_equal(vec([0, 0, 0, 0]), new FixedArray(29, 4)));
+
+console.log(is_equal(Result.Err("sl"), Result.Err("sl")));
