@@ -8,39 +8,34 @@ interface ResultMethods<T, E> {
   unwrap(): T;
   expect(msg: string): T;
   unwrap_or(default_value: T): T;
+  unwrap_err(): E;
+  expect_err(msg: string): E;
   iter(): IterableIterator<Option<T>>;
 }
 
 // @ts-ignore
-export interface Ok<T, E> extends ResultMethods<T, E> {
-  readonly ok: true;
-  readonly value: T;
-}
+export interface Ok<T, E> extends ResultMethods<T, E> {}
 
-export interface Err<T, E> extends ResultMethods<T, E> {
-  readonly ok: false;
-  readonly error: E;
-}
+export interface Err<T, E> extends ResultMethods<T, E> {}
 
 export type Result<T, E> = Ok<T, E> | Err<T, E>;
 
 const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 
 class ResultImpl<T, E> implements ResultMethods<T, E> {
+  // we will leave these as private so that equality checkers can work
   private ok: boolean;
+  private value: T | undefined;
+  private error: E | undefined;
   [HIDDEN_RESULT_TAG] = true;
   constructor(ok: boolean, value_or_error: any) {
     this.ok = ok;
-    if (ok === true)
-      // @ts-ignore
-      this.value = value_or_error;
-    // @ts-ignore
+    if (ok === true) this.value = value_or_error;
     else this.error = value_or_error;
+    Object.freeze(this);
   }
-  // @ts-ignore
   [DEBUG](_depth: number, options: any, inspect: Function) {
     if (this.is_ok()) {
-      // @ts-ignore
       return `Ok(${inspect(this.value, options)})`;
     } else {
       // @ts-ignore
@@ -59,18 +54,23 @@ class ResultImpl<T, E> implements ResultMethods<T, E> {
     } else yield Option.None();
   }
   unwrap(): T {
-    if (!this.ok) throw new Error(`called \`Result::unwrap()\` on an \`Err\``);
-    // @ts-ignore
-    return this.value;
+    if (!this.ok) throw new Error(String(this.error));
+    return this.value!;
   }
   expect(msg: string): T {
-    if (!this.ok) throw new Error(msg);
-    // @ts-ignore
-    return this.value;
+    if (!this.ok) throw new Error(`${msg}: ${this.error}`);
+    return this.value!;
   }
   unwrap_or(default_value: T): T {
-    // @ts-ignore
-    return this.ok ? this.value : default_value;
+    return this.ok ? this.value! : default_value;
+  }
+  unwrap_err(): E {
+    if (this.ok) throw new Error(String(this.value));
+    return this.error!;
+  }
+  expect_err(msg: string): E {
+    if (this.ok) throw new Error(`${msg}: ${this.value}`);
+    return this.error!;
   }
 }
 

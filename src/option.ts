@@ -9,9 +9,7 @@ interface OptionMethods<T> {
   iter(): IterableIterator<T>;
 }
 
-export interface Some<T> extends OptionMethods<T> {
-  readonly value: T;
-}
+export interface Some<T> extends OptionMethods<T> {}
 
 export interface None<T = unknown> extends OptionMethods<T> {}
 
@@ -21,6 +19,7 @@ const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 
 class OptionImpl<T> implements OptionMethods<T> {
   private some: boolean;
+  private value: T | undefined;
   [HIDDEN_OPTION_TAG] = true;
   [DEBUG](_depth: number, options: any, inspect: Function) {
     if (this.is_some()) {
@@ -31,8 +30,8 @@ class OptionImpl<T> implements OptionMethods<T> {
   }
   constructor(some: boolean, value: any) {
     this.some = some;
-    // @ts-ignore
     if (some === true) this.value = value;
+    Object.freeze(this);
   }
 
   is_some(): this is Some<T> {
