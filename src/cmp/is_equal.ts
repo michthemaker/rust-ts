@@ -1,5 +1,9 @@
 /**
- * @deep equal on any type
+ * Deep equality on any two values.
+ *
+ * @remarks A value whose class defines `eq` (the PartialEq contract) decides for itself, so private state counts too.
+ * @remarks Errors are equal when their class, name, message and cause match. The stack is ignored.
+ * @remarks Everything else is compared structurally: primitives, dates, regexps, arrays, sets, maps and plain objects.
  */
 export function is_equal(a: any, b: any): boolean {
   // 1. Primitive Identity & Matching Reference Identity
@@ -18,13 +22,29 @@ export function is_equal(a: any, b: any): boolean {
   // 4. Structural Verification based on Prototypes
   if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false;
 
-  // 5. Native Date Objects
+  // 5. Custom equality (PartialEq): the type decides. Only reached for two values of the same class.
+  if (typeof a.eq === "function") return a.eq(b);
+
+  // 6. Native Date Objects
   if (a instanceof Date) return a.getTime() === b.getTime();
 
-  // 6. Native RegExp Rules
+  // 7. Native RegExp Rules
   if (a instanceof RegExp) return a.toString() === b.toString();
 
-  // 7. Arrays Deep Structural Verification
+  // 8. Errors: class (checked above), name, message and cause. The stack differs per creation site, so it is ignored.
+  if (a instanceof Error) {
+    return (
+      a.name === b.name &&
+      a.message === b.message &&
+      is_equal(a.cause, b.cause) &&
+      (typeof AggregateError === "undefined" ||
+        !(a instanceof AggregateError) ||
+        is_equal(a.errors, b.errors)) &&
+      own_fields_equal(a, b) // custom fields such as `code`
+    );
+  }
+
+  // 9. Arrays Deep Structural Verification
   if (Array.isArray(a)) {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) {
@@ -33,7 +53,7 @@ export function is_equal(a: any, b: any): boolean {
     return true;
   }
 
-  // 8. Native JavaScript Set Deep Check
+  // 10. Native JavaScript Set Deep Check
   if (a instanceof Set) {
     if (a.size !== b.size) return false;
     // For every entry in Set A, check if a deep-match exists anywhere in Set B
@@ -50,7 +70,7 @@ export function is_equal(a: any, b: any): boolean {
     return true;
   }
 
-  // 9. Native JavaScript Map Deep Check
+  // 11. Native JavaScript Map Deep Check
   if (a instanceof Map) {
     if (a.size !== b.size) return false;
     for (const [keyA, valA] of a.entries()) {
@@ -67,7 +87,12 @@ export function is_equal(a: any, b: any): boolean {
     return true;
   }
 
-  // 10. Plain Objects / Custom Class Instantiations (Struct Parity)
+  // 12. Plain Objects / Custom Class Instantiations (Struct Parity)
+  return own_fields_equal(a, b);
+}
+
+/** the own enumerable fields of both objects are the same keys with deeply equal values */
+function own_fields_equal(a: any, b: any): boolean {
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);
 

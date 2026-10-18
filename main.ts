@@ -1,3 +1,4 @@
+import { is_equal } from "./src/cmp/is_equal.ts";
 import "./src/globals.ts";
 import { match } from "./src/match.ts";
 import { Option } from "./src/option.ts";
@@ -20,9 +21,12 @@ match(Result.Err(new Error("namesls")), {
   },
 });
 
-match(Option.Some(new Error("namesls")), {
-  None() {
-    console.log("None covered");
-    return 2999;
-  },
-});
+const ERR_CLOSED = new Error("Channel closed");
+const ERR_CLOSED_NO_RX = new Error("Channel closed (No Receivers)");
+
+console.log(is_equal(Result.Err(ERR_CLOSED), Result.Err(ERR_CLOSED_NO_RX)));
+
+console.log(is_equal(Result.Ok(1), Result.Ok(3202)));
+console.log(is_equal(Result.Ok(1), Result.Ok(1)));
+console.log(is_equal(Option.Some(1), Option.Some(3202)));
+console.log(is_equal(Option.Some(1), Option.Some(1)));

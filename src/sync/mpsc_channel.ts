@@ -10,6 +10,7 @@ import { Result } from "../result.ts";
 import { INTERNAL_SEMAPHORE_CONTROLLER, Semaphore } from "./semaphore.ts";
 import { SharedJsonBuffer } from "../threads/shared_json_buffer.ts";
 import { Option } from "../option.ts";
+import { match, P } from "../match.ts";
 
 const IDX_HEAD = 0;
 const IDX_TAIL = 1;
@@ -320,14 +321,16 @@ export class Receiver<T> extends ChannelHandle<T> {
   async *iter(): AsyncGenerator<T, void, void> {
     while (true) {
       const result = await this.recv();
-      if (result.ok) {
-        yield result.value;
-      } else {
-        if (result.error === ERR_CLOSED || result.error === ERR_DISPOSED_RECEIVER) {
-          return;
-        }
-        throw result.error;
-      }
+      const next = match(result, {
+        Ok: (val) => Option.Some(val),
+        [P.Err(ERR_CLOSED)]: () => Option.None(),
+        [P.Err(ERR_DISPOSED_RECEIVER)]: () => Option.None(),
+        Err(err) {
+          throw err;
+        },
+      });
+      if (next.is_some()) yield next.unwrap();
+      if (Option.is_none(next) || next.is_none()) return;
     }
   }
 

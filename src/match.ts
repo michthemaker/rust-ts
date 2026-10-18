@@ -1,4 +1,4 @@
-import { is_equal } from "../lib/is_equal";
+import { is_equal } from "./cmp/is_equal";
 import { Option } from "./option";
 import { Result } from "./result";
 
