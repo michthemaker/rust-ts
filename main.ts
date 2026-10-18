@@ -4,6 +4,7 @@ import "./src/globals.ts";
 import { match } from "./src/match.ts";
 import { Option } from "./src/option.ts";
 import { Result } from "./src/result.ts";
+import { OnceLock } from "./src/sync/once_lock.ts";
 import { vec } from "./src/vec.ts";
 
 export function main() {
@@ -43,10 +44,12 @@ export function main() {
   console.log("-------");
   console.log(d32("2929.00").eq(d32("0.299")));
   console.log(d32("2929.00").eq(d32("2929.00")));
+  console.log(is_equal(vec([0, 0, 0, 0]), new FixedArray(29, 4)));
+  console.log(is_equal(new FixedArray(29, 4), new FixedArray(29, 4)));
+
+  console.log(is_equal(Result.Err("sl"), Result.Err("sl")));
+  console.log(is_equal(Option.None(), Option.None()));
 }
 
-console.log(is_equal(vec([0, 0, 0, 0]), new FixedArray(29, 4)));
-console.log(is_equal(new FixedArray(29, 4), new FixedArray(29, 4)));
-
-console.log(is_equal(Result.Err("sl"), Result.Err("sl")));
-console.log(is_equal(Option.None(), Option.None()));
+const mine = new OnceLock();
+console.log(is_equal(mine, new OnceLock()));

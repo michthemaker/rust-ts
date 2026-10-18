@@ -1,6 +1,6 @@
 import { expect, test, describe } from "bun:test";
 import { vec, Vec } from "../src/vec";
-import { OnceLock } from "../src/sync/once-lock";
+import { OnceLock } from "../src/sync/once_lock";
 import { range } from "../src/range";
 import { inspect } from "bun";
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Slice } from "../src/slice";
-import { OnceLock } from "../src/sync/once-lock";
+import { OnceLock } from "../src/sync/once_lock";
 import { inspect } from "node:util";
 import { FixedArray } from "../src/fixed_array";
 import { match, P } from "../src/match";
