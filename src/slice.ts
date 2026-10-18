@@ -1,4 +1,4 @@
-import { is_equal } from "./cmp/partial_eq";
+import { is_equal, PartialEq } from "./cmp/partial_eq";
 import { clone_of } from "../lib/clone";
 import { Option } from "./option";
 import { Result } from "./result";
@@ -57,7 +57,7 @@ function as_array<T>(src: Source<T>): readonly T[] {
  * Never copies on construction. Sub-slices share `buf`, so mutation through
  * one view is visible in the owner (and in every overlapping view).
  */
-export class Slice<T> {
+export class Slice<T> implements PartialEq<Source<T>> {
   protected buf: T[];
   protected start: number;
   protected _len: number;
@@ -269,10 +269,6 @@ export class Slice<T> {
     return Result.Err<number, number>(low);
   }
 
-  public eq(other: Source<T>): boolean {
-    return is_equal(this.to_array(), as_array(other));
-  }
-
   /** Subslices separated by elements matching `pred` (the matching elements are not included). */
   public split(pred: (item: T) => boolean): IterableIterator<Slice<T>> {
     const self = this;
@@ -401,6 +397,34 @@ export class Slice<T> {
   /** writes `values` over [start, start + len) of the shared buffer */
   protected write_back(values: T[]): void {
     for (let i = 0; i < this._len; i++) this.buf[this.start + i] = values[i];
+  }
+
+  /**
+   * True when `other` is a slice or an array with the same length and equal elements (compared with `is_equal`).
+   *
+   * @remarks Capacity and the kind of container (Vec, FixedArray, view, plain array) do not matter.
+   * @remarks Anything else is simply not equal: this never throws for the wrong kind of value.
+   */
+  public eq(other: Source<T>): boolean {
+    if (other instanceof Slice) {
+      if (other._len !== this._len) return false;
+      for (let i = 0; i < this._len; i++) {
+        if (!is_equal(this.buf[this.start + i], other.buf[other.start + i])) return false;
+      }
+      return true;
+    }
+    if (Array.isArray(other)) {
+      if (other.length !== this._len) return false;
+      for (let i = 0; i < this._len; i++) {
+        if (!is_equal(this.buf[this.start + i], other[i])) return false;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  public ne(other: Source<T>): boolean {
+    return !this.eq(other);
   }
 }
 

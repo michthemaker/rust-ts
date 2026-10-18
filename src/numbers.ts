@@ -828,12 +828,12 @@ class DecimalImpl<K extends DecimalKind, S extends number>
   eq(other: unknown): boolean {
     const operand = this.#try_operand(other);
     const this_value = this;
-    return match(operand.ok(), {
-      Some(operand) {
+    return match(operand, {
+      Ok(operand) {
         const { a, b } = this_value.#align(operand);
         return a === b;
       },
-      None: () => false,
+      Err: () => false,
     });
   }
 

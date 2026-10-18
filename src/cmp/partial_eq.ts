@@ -24,11 +24,11 @@ export function is_equal(a: any, b: any): boolean {
     return false;
   }
 
-  // 4. Structural Verification based on Prototypes
-  if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false;
-
-  // 5. Custom equality (PartialEq): the type decides. Only reached for two values of the same class.
+  // 4. Custom equality (PartialEq): the type decides. Only reached for two values of the same class.
   if (typeof a.eq === "function") return a.eq(b);
+
+  // 5. Structural Verification based on Prototypes
+  if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false;
 
   // 6. Native Date Objects
   if (a instanceof Date) return a.getTime() === b.getTime();
