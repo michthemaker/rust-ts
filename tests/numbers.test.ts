@@ -157,29 +157,29 @@ describe("Sized numbers", () => {
         d32("0.1000083"),
         d32("0.6"),
         d64("100.02900"),
-        d64("1000.9200292"),
+        d64("1000.92002"),
         d128("1000.569302020202"),
         d128("1000.5693"),
       );
 
       test("'add', 'sub' and 'rem' use the larger scale ('0.10000 + 0.3222' is '0.42220').", () => {
         expect(_1.add(_2).scale).toBe(7);
-        expect(_3.add(_4).scale).toBe(7);
+        expect(_3.add(_4).scale).toBe(5);
         expect(_5.add(_6).scale).toBe(12);
 
         expect(_1.sub(_2).scale).toBe(7);
-        expect(_3.sub(_4).scale).toBe(7);
+        expect(_3.sub(_4).scale).toBe(5);
         expect(_5.sub(_6).scale).toBe(12);
 
         console.log(_3.rem(_4));
 
         expect(_1.rem(_2).scale).toBe(7);
-        expect(_3.rem(_4).scale).toBe(7);
+        expect(_3.rem(_4).scale).toBe(5);
         expect(_5.rem(_6).scale).toBe(12);
       });
       test("'mul' uses the sum ('1.5 * 1.5' is '2.25').", () => {
         expect(_1.mul(_2).scale).toBe(8);
-        // expect(_3.mul(_4).scale).toBe(12);
+        expect(_3.mul(_4).scale).toBe(10);
         expect(_5.mul(_6).scale).toBe(16);
       });
       test("An integer argument leaves the scale alone ('1.50 + 1' is '2.50', '1.50 * 2' is '3.00').", () => {

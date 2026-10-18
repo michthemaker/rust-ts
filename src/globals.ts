@@ -29,20 +29,17 @@ declare global {
    *
    * @remarks `S` is the scale: `d32<2>` is like `1.50`.
    */
-  type d32<S extends number = number> = SizedNumbers.d32<S>;
-  /**
+  type d32<S extends number = number, P extends number = number> = SizedNumbers.d32<S, P>; /**
    * Exact decimal with up to 16 significant digits and 16 decimal places.
    *
    * @remarks `S` is the scale: `d64<2>` is like `1.50`.
    */
-  type d64<S extends number = number> = SizedNumbers.d64<S>;
-  /**
+  type d64<S extends number = number, P extends number = number> = SizedNumbers.d64<S, P>; /**
    * Exact decimal with up to 28 significant digits and 28 decimal places.
    *
    * @remarks `S` is the scale: `d128<2>` is like `1.50`.
    */
-  type d128<S extends number = number> = SizedNumbers.d128<S>;
-
+  type d128<S extends number = number, P extends number = number> = SizedNumbers.d128<S, P>;
   // uint
   const u8: SizedNumbers.U8;
   const u16: SizedNumbers.U16;

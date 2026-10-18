@@ -441,8 +441,14 @@ export const f64: F64 = object_assign(
 type DecimalKind = "d32" | "d64" | "d128";
 export default DecimalKind;
 
-export interface Decimal<K extends DecimalKind = DecimalKind, S extends number = number> {
+export interface Decimal<
+  K extends DecimalKind = DecimalKind,
+  S extends number = number,
+  P extends number = number,
+> {
   readonly kind: K;
+  /** type-only: the significant digits when known. It does not exist at runtime. */
+  readonly digits?: P;
   /** how many digits come after the point: "-1.50" has scale 2 */
   readonly scale: S;
   /** always keeps the scale, e.g. "1.50" */
@@ -470,7 +476,10 @@ export interface Decimal<K extends DecimalKind = DecimalKind, S extends number =
    * this * other. The scale is the sum of the two, so 1.5 * 1.5 is 2.25. A sum over the
    * kind's scale limit is a compile error.
    */
-  mul<T extends number>(other: MulArg<K, S, T>): DecimalOf<K, SumScale<S, T>>;
+  mul<T extends number, Q extends number, D extends number>(
+    this: Decimal<K, S, D> & MulGuard<K, S, T, D, Q>,
+    other: DecimalOf<K, T, Q>,
+  ): DecimalOf<K, SumScale<S, T>, MulDigits<D, Q>>;
   /** this * an integer (scale 0). Floats are not accepted. */
   mul<const N extends IntLike>(other: IntArg<N>): DecimalOf<K, S>;
 
@@ -502,19 +511,26 @@ export interface Decimal<K extends DecimalKind = DecimalKind, S extends number =
  *
  * @remarks `S` is the scale: `d32<2>` is like `1.50`.
  */
-export interface d32<S extends number = number> extends Prettify<Decimal<"d32", S>> {}
+export interface d32<S extends number = number, P extends number = number> extends Prettify<
+  Decimal<"d32", S, P>
+> {}
 /**
  * Exact decimal with up to 16 significant digits and 16 decimal places.
  *
  * @remarks `S` is the scale: `d64<2>` is like `1.50`.
  */
-export interface d64<S extends number = number> extends Prettify<Decimal<"d64", S>> {}
+export interface d64<S extends number = number, P extends number = number> extends Prettify<
+  Decimal<"d64", S, P>
+> {}
+
 /**
  * Exact decimal with up to 28 significant digits and 28 decimal places.
  *
  * @remarks `S` is the scale: `d128<2>` is like `1.50`.
  */
-export interface d128<S extends number = number> extends Prettify<Decimal<"d128", S>> {}
+export interface d128<S extends number = number, P extends number = number> extends Prettify<
+  Decimal<"d128", S, P>
+> {}
 
 // digits = significant digits, scale = digits after the point. Both limits apply on their
 // own, and the scale cap equals the digit cap, the same relationship rust_decimal has
@@ -593,17 +609,57 @@ type ScaleOf<S extends string> = string extends S
 // compiling. A scale that is not a literal (plain `number`) gives `number`.
 
 /** the named type of a kind (d32<S>, d64<S> or d128<S>), so hovers and errors show it */
-type DecimalOf<K extends DecimalKind, S extends number> = K extends "d32"
-  ? d32<S>
+type DecimalOf<K extends DecimalKind, S extends number, P extends number = number> = K extends "d32"
+  ? d32<S, P>
   : K extends "d64"
-    ? d64<S>
-    : d128<S>;
+    ? d64<S, P>
+    : d128<S, P>;
+
+/** the significant digits written in the literal: "1.50" gives 3. Zero and non-literals give number (unknown). */
+type DigitsOf<S extends string> = string extends S
+  ? number
+  : Unsigned<S> extends `${infer I}.${infer F}`
+    ? StripZeros<`${I}${F}`> extends ""
+      ? number
+      : Chars<StripZeros<`${I}${F}`>>["length"]
+    : number;
 
 type LimitsOf<K extends DecimalKind> = K extends "d32"
   ? typeof D32_LIMITS
   : K extends "d64"
     ? typeof D64_LIMITS
     : typeof D128_LIMITS;
+
+type ResultTooManyDigits =
+  "the result would have too many significant digits for this decimal type";
+
+/** the fewest digits a product can have: an a-digit times a b-digit number has at least a + b - 1 */
+type MulDigits<A extends number, B extends number> = number extends A
+  ? number
+  : number extends B
+    ? number
+    : [...Tup<A>, ...Tup<B>] extends [0, ...infer R]
+      ? R["length"]
+      : never;
+
+type DigitsFit<N extends number, L extends Limits> = number extends N
+  ? true
+  : Tup<L["digits"]> extends [...Tup<N>, ...unknown[]]
+    ? true
+    : false;
+
+type MulGuard<
+  K extends DecimalKind,
+  S extends number,
+  T extends number,
+  D extends number,
+  Q extends number,
+> =
+  ScaleFits<SumScale<S, T>, LimitsOf<K>> extends true
+    ? DigitsFit<MulDigits<D, Q>, LimitsOf<K>> extends true
+      ? unknown
+      : ResultTooManyDigits
+    : ResultTooManyPlaces;
 
 type IntLike = u8 | u16 | u32 | usize | u64 | u128 | i8 | i16 | i32 | isize | i64 | i128;
 
@@ -642,10 +698,6 @@ type ScaleFits<N extends number, L extends Limits> = number extends N
     ? true
     : false;
 
-/** the decimal itself when the product's scale fits the kind, otherwise an error message */
-type MulArg<K extends DecimalKind, S extends number, T extends number> =
-  ScaleFits<SumScale<S, T>, LimitsOf<K>> extends true ? DecimalOf<K, T> : ResultTooManyPlaces;
-
 interface DecimalType<K> {
   /** true if the string is a valid literal for this type: format, digit and scale limits. */
   is(s: string): boolean;
@@ -654,13 +706,13 @@ interface DecimalType<K> {
 }
 
 export interface D32 extends Prettify<DecimalType<d32>> {
-  <const S extends string>(s: DecimalArg<S, typeof D32_LIMITS>): d32<ScaleOf<S>>;
+  <const S extends string>(s: DecimalArg<S, typeof D32_LIMITS>): d32<ScaleOf<S>, DigitsOf<S>>;
 }
 export interface D64 extends Prettify<DecimalType<d64>> {
-  <const S extends string>(s: DecimalArg<S, typeof D64_LIMITS>): d64<ScaleOf<S>>;
+  <const S extends string>(s: DecimalArg<S, typeof D64_LIMITS>): d64<ScaleOf<S>, DigitsOf<S>>;
 }
 export interface D128 extends Prettify<DecimalType<d128>> {
-  <const S extends string>(s: DecimalArg<S, typeof D128_LIMITS>): d128<ScaleOf<S>>;
+  <const S extends string>(s: DecimalArg<S, typeof D128_LIMITS>): d128<ScaleOf<S>, DigitsOf<S>>;
 }
 
 // ----------------------------------------------------------------- runtime
