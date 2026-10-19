@@ -223,11 +223,35 @@ describe("Sized numbers", () => {
         expect(c.div(2)).to_equal(d32("-3.5"));
         expect(c.neg().div(2)).to_equal(d32("3.5"));
         expect(c.rem(2)).to_equal(d32("-1.0"));
-        expect(c.neg().rem(2)).to_equal(d32("1"));
+        expect(c.neg().rem(2)).to_equal(d32("1.0"));
       });
     });
     describe("Limits during arithmetic", () => {
-      test("Results over the digit or place limit throw 'RangeError', for each kind and each operation.", () => {});
+      test("Results over the digit or place limit throw 'RangeError', for each kind and each operation.", () => {
+        const results_digit = Tuple(
+          Tuple(d32("11111"), d32("11111")),
+          Tuple(d64("19228382993022"), d64("2833822839")),
+          Tuple(d128("288308283839293"), d128("28338232893838992839")),
+        );
+
+        const results_scale = Tuple(
+          Tuple(d32("0.111113"), d32("0.111113")),
+          Tuple(d64("0.19393922838"), d64("0.28322839")),
+          Tuple(d128("0.28830828839293"), d128("0.2833823288992839")),
+        );
+
+        for (const value of results_digit) {
+          const [op_1, op_2] = value;
+          // @ts-expect-error
+          expect(() => op_1.mul(op_2)).toThrow(RangeError);
+        }
+
+        for (const value of results_scale) {
+          const [op_1, op_2] = value;
+          // @ts-expect-error
+          expect(() => op_1.mul(op_2)).toThrow(RangeError);
+        }
+      });
     });
   });
   test("'.is' on the in-range and out-of-range sides", () => {
