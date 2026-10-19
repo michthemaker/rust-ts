@@ -195,7 +195,22 @@ describe("Sized numbers", () => {
         expect(d32("1.0").div(4).scale).toBe(2);
         expect(d32("2.0000").div(4).scale).toBe(4);
         console.log(d32("2.0").div(d32("2.0000")));
-        // By reading the code, a divisor with more places than the dividend can produce scale 0 (`1.0 / 0.500`), which prints without a point and which `d32("2")` then rejects. Pin whichever behavior you want. I want what rust_decimal would do in this case, read it
+      });
+      test("neg of zero, and neg(neg(x)) equals x", () => {
+        expect(d32("1.0").neg()).to_equal(d32("-1.0"));
+        expect(d32("0.0").neg()).to_equal(d32("0.0"));
+      });
+      test("Cross-check each operation against a plain bigint reference you write in the test, using random values.", () => {
+        expect(d32("1000.0").add(1000n)).to_equal(d32("2000.0"));
+        expect(d64("1000.0").mul(100000n)).to_equal(d64("100000000.0"));
+        expect(d64("1000.0").div(100000n)).to_equal(d64("0.01"));
+        expect(d64("1000.0").sub(100000n)).to_equal(d64("-99000.0"));
+      });
+      test("Algebraic properties", () => {
+        const [a, b] = Tuple(d32("55.0"), d32("66.20"));
+        expect(a.add(b)).to_equal(b.add(a));
+        expect(a.add(b).sub(b)).to_equal(a as any);
+        expect(a.sub(a)).to_equal(d32("0.0"));
       });
     });
   });

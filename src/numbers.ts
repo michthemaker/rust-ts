@@ -476,10 +476,10 @@ export interface Decimal<
    * this * other. The scale is the sum of the two, so 1.5 * 1.5 is 2.25. A sum over the
    * kind's scale limit is a compile error.
    */
-  mul<T extends number, Q extends number, D extends number>(
-    this: Decimal<K, S, D> & MulGuard<K, S, T, D, Q>,
+  mul<T extends number, Q extends number, SS extends number, D extends number>(
+    this: { readonly scale: SS; readonly digits?: D } & MulGuard<K, SS, T, D, Q>,
     other: DecimalOf<K, T, Q>,
-  ): DecimalOf<K, SumScale<S, T>, MulDigits<D, Q>>;
+  ): DecimalOf<K, SumScale<SS, T>, MulDigits<D, Q>>;
   /** this * an integer (scale 0). Floats are not accepted. */
   mul<const N extends IntLike>(other: IntArg<N>): DecimalOf<K, S>;
 

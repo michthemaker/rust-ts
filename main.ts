@@ -4,7 +4,6 @@ import "./src/globals.ts";
 import { match } from "./src/match.ts";
 import { Option } from "./src/option.ts";
 import { Result } from "./src/result.ts";
-import { OnceLock } from "./src/sync/once_lock.ts";
 import { vec } from "./src/vec.ts";
 
 export function main() {
@@ -50,12 +49,4 @@ export function main() {
   console.log(is_equal(Option.None(), Option.None()));
 }
 
-console.log(d32("2929.00").eq(d32("2929.00")));
-console.log(new OnceLock());
-const mine = new OnceLock<d32<1>>();
-mine.set(d32("3.0"));
-console.log(mine);
-const mine_2 = new OnceLock<d32<1>>();
-mine_2.set(d32("2.0"));
-console.log(is_equal(mine, new OnceLock()));
-console.log(is_equal(mine, mine_2));
+console.log(d32.is("2"));
