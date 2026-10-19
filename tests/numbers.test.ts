@@ -196,6 +196,8 @@ describe("Sized numbers", () => {
         expect(d32("2.0000").div(4).scale).toBe(4);
         console.log(d32("2.0").div(d32("2.0000")));
       });
+    });
+    describe("Arithmetic correctness", () => {
       test("neg of zero, and neg(neg(x)) equals x", () => {
         expect(d32("1.0").neg()).to_equal(d32("-1.0"));
         expect(d32("0.0").neg()).to_equal(d32("0.0"));
@@ -211,6 +213,17 @@ describe("Sized numbers", () => {
         expect(a.add(b)).to_equal(b.add(a));
         expect(a.add(b).sub(b)).to_equal(a as any);
         expect(a.sub(a)).to_equal(d32("0.0"));
+      });
+      test("Signs: every combination for mul and div", () => {
+        const [a, b, c] = Tuple(d32("5.0"), d32("-6.0"), d32("-7.0"), d32("2.0"));
+        // edge case here
+        // @ts-expect-error
+        expect(a.mul(b)).to_equal(d32("-30.00"));
+        expect(a.neg().mul(b)).to_equal(d32("30.00"));
+        expect(c.div(2)).to_equal(d32("-3.5"));
+        expect(c.neg().div(2)).to_equal(d32("3.5"));
+        expect(c.rem(2)).to_equal(d32("-1.0"));
+        expect(c.neg().rem(2)).to_equal(d32("1.0"));
       });
     });
   });
