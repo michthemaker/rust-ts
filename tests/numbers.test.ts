@@ -252,6 +252,20 @@ describe("Sized numbers", () => {
           expect(() => op_1.mul(op_2)).toThrow(RangeError);
         }
       });
+      test("'div' throws for a never-ending result and for a zero divisor, and 'rem' throws for a zero divisor.", () => {
+        const operands = Tuple(d32("11111"), d64("19228382993022"), d128("288308283839293"));
+
+        for (let operand of operands) {
+          // @ts-expect-error
+          expect(() => operand.div(0)).toThrow();
+          // @ts-expect-error
+          expect(() => operand.rem(0)).toThrow();
+        }
+        // never ending results
+        expect(() => d32("20").div(3)).toThrow(/the result never ends/i);
+        expect(() => d64("37").div(3)).toThrow(/the result never ends/i);
+        expect(() => d128("10000000000000000000000000").div(9)).toThrow(/the result never ends/i);
+      });
     });
   });
   test("'.is' on the in-range and out-of-range sides", () => {
