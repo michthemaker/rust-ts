@@ -579,8 +579,20 @@ type ShapeOk<I extends string, F extends string> = I extends ""
         : false
       : false;
 
+// integer-only literal: "0", or digits without a leading zero
+type IntShapeOk<I extends string> = I extends ""
+  ? false
+  : AllDigits<I> extends true
+    ? I extends "0"
+      ? true
+      : I extends `0${string}`
+        ? false
+        : true
+    : false;
+
 type BadFormat =
-  'invalid decimal literal: use digits, a ".", then at least one digit, like "1.50" (no exponent, no "+", no leading zeros)';
+  'invalid decimal literal: use digits with an optional ".", like "2" or "1.50" (no exponent, no "+", no leading zeros)';
+
 type TooManyPlaces = "too many decimal places for this decimal type";
 type TooManyDigits = "too many significant digits for this decimal type";
 
@@ -595,14 +607,18 @@ type DecimalArg<S extends string, L extends Limits> = string extends S
           : TooManyDigits
         : TooManyPlaces
       : BadFormat
-    : BadFormat;
+    : IntShapeOk<Unsigned<S>> extends true
+      ? LenLte<StripZeros<Unsigned<S>>, L["digits"]> extends true
+        ? S
+        : TooManyDigits
+      : BadFormat;
 
 /** the scale written in the literal: "0.10000" gives 5 */
 type ScaleOf<S extends string> = string extends S
   ? number
   : S extends `${string}.${infer F}`
     ? Chars<F>["length"]
-    : number;
+    : 0;
 
 // ----------------------------------------------------------------- methods
 // The scales of the arguments are literal numbers, so the result scale is computed while
@@ -622,7 +638,9 @@ type DigitsOf<S extends string> = string extends S
     ? StripZeros<`${I}${F}`> extends ""
       ? number
       : Chars<StripZeros<`${I}${F}`>>["length"]
-    : number;
+    : StripZeros<Unsigned<S>> extends ""
+      ? number
+      : Chars<StripZeros<Unsigned<S>>>["length"];
 
 type LimitsOf<K extends DecimalKind> = K extends "d32"
   ? typeof D32_LIMITS
@@ -916,7 +934,7 @@ function make<K extends DecimalKind, S extends number>(
   return new DecimalImpl(kind, mantissa, scale) as unknown as Decimal<K, S>;
 }
 
-const LITERAL = /^(-?)(0|[1-9][0-9]*)\.([0-9]+)$/;
+const LITERAL = /^(-?)(0|[1-9][0-9]*)(?:\.([0-9]+))?$/;
 
 function parse_decimal<K extends DecimalKind>(
   kind: K,
@@ -927,9 +945,10 @@ function parse_decimal<K extends DecimalKind>(
   const match = LITERAL.exec(s);
   if (!match)
     return Result.Err(
-      `invalid decimal literal for ${kind}: ${JSON.stringify(s)} (expected digits, a ".", then digits, like "1.50")`,
+      `invalid decimal literal for ${kind}: ${JSON.stringify(s)} (expected digits with an optional ".", like "2" or "1.50")`,
     );
-  const [, sign, int, frac] = match;
+  const [, sign, int] = match;
+  const frac = match[3] ?? "";
   if (frac.length > limits.scale)
     return Result.Err(
       `literal out of range for ${kind}: ${s} (at most ${limits.scale} decimal places)`,
@@ -967,7 +986,7 @@ function decimal_type<K extends DecimalKind>(kind: K, limits: Limits) {
 /**
  * Builds a `d32` from a string like `"1.50"`.
  *
- * @remarks Digits, a `.`, then digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
+ * @remarks Digits, with an optional . and more digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
  * @throws If the string is invalid or over the limits.
  * @example
  * ```ts
@@ -978,7 +997,7 @@ export const d32 = decimal_type("d32", D32_LIMITS) as D32;
 /**
  * Builds a `d64` from a string like `"1.50"`.
  *
- * @remarks Digits, a `.`, then digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
+ * @remarks Digits, with an optional . and more digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
  * @throws If the string is invalid or over the limits.
  * @example
  * ```ts
@@ -989,7 +1008,7 @@ export const d64 = decimal_type("d64", D64_LIMITS) as D64;
 /**
  * Builds a `d128` from a string like `"1.50"`.
  *
- * @remarks Digits, a `.`, then digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
+ * @remarks Digits, with an optional . and more digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
  * @throws If the string is invalid or over the limits.
  * @example
  * ```ts

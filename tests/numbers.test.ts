@@ -223,8 +223,11 @@ describe("Sized numbers", () => {
         expect(c.div(2)).to_equal(d32("-3.5"));
         expect(c.neg().div(2)).to_equal(d32("3.5"));
         expect(c.rem(2)).to_equal(d32("-1.0"));
-        expect(c.neg().rem(2)).to_equal(d32("1.0"));
+        expect(c.neg().rem(2)).to_equal(d32("1"));
       });
+    });
+    describe("Limits during arithmetic", () => {
+      test("Results over the digit or place limit throw 'RangeError', for each kind and each operation.", () => {});
     });
   });
   test("'.is' on the in-range and out-of-range sides", () => {

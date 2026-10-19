@@ -63,7 +63,7 @@ declare global {
   /**
    * Builds a `d32` from a string like `"1.50"`.
    *
-   * @remarks Digits, a `.`, then digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
+   * @remarks Digits, with an optional . and more digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
    * @throws If the string is invalid or over the limits.
    * @example
    * ```ts
@@ -74,7 +74,7 @@ declare global {
   /**
    * Builds a `d64` from a string like `"1.50"`.
    *
-   * @remarks Digits, a `.`, then digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
+   * @remarks Digits, with an optional . and more digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
    * @throws If the string is invalid or over the limits.
    * @example
    * ```ts
@@ -85,7 +85,7 @@ declare global {
   /**
    * Builds a `d128` from a string like `"1.50"`.
    *
-   * @remarks Digits, a `.`, then digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
+   * @remarks Digits, with an optional . and more digits. No exponent. The scale is kept, so `"0.10000"` has 5 places.
    * @throws If the string is invalid or over the limits.
    * @example
    * ```ts

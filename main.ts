@@ -49,4 +49,4 @@ export function main() {
   console.log(is_equal(Option.None(), Option.None()));
 }
 
-console.log(d32.is("2"));
+console.log(d32.is("2"), d32("3"));
