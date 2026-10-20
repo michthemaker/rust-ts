@@ -1,4 +1,4 @@
-import { is_equal } from "../lib/is_equal";
+import { is_equal } from "./cmp/partial_eq";
 import { Option } from "./option";
 import { Result } from "./result";
 
@@ -53,22 +53,22 @@ const Pattern: PatternInterface = {
   _: SYMBOL_WILDCARD,
   Some(val) {
     return define_pattern("rust-ts::std::Some<T>", (s) =>
-      Option.is_option(s) && s.is_some() && is_equal(val, s.value)
-        ? Option.Some([s.value])
+      Option.is_option(s) && s.is_some() && is_equal(val, s.unwrap())
+        ? Option.Some([s.unwrap()])
         : Option.None(),
     );
   },
   Ok(val) {
     return define_pattern("rust-ts::std::Ok<T, E>", (s) =>
-      Result.is_result(s) && s.is_ok() && is_equal(val, s.value)
-        ? Option.Some([s.value])
+      Result.is_result(s) && s.is_ok() && is_equal(val, s.unwrap())
+        ? Option.Some([s.unwrap()])
         : Option.None(),
     );
   },
   Err(val) {
     return define_pattern("rust-ts::std::Err<T, E>", (s) =>
-      Result.is_result(s) && s.is_err() && is_equal(val, s.error)
-        ? Option.Some([s.error])
+      Result.is_result(s) && s.is_err() && is_equal(val, s.unwrap_err())
+        ? Option.Some([s.unwrap_err()])
         : Option.None(),
     );
   },
@@ -128,32 +128,20 @@ function match(value: any, config: any) {
     const { Ok, Err } = config as ResultArms<unknown, unknown, unknown>;
 
     // Explicit exhaustive match rules validation
-    if (value.is_ok()) {
-      if (typeof Ok === "function") return Ok(value.value);
-    } else {
-      if (typeof Err === "function") return Err(value.error);
-    }
-
-    // If it missed the standard fields, check for a wildcard arm
-    if (config[SYMBOL_WILDCARD] !== undefined) return config[SYMBOL_WILDCARD](value);
+    if (value.is_ok() && typeof Ok === "function") return Ok(value.unwrap());
+    if (value.is_err() && typeof Err === "function") return Err(value.unwrap_err());
 
     // Exact compilation-emulation error triggers
     if (Option.is_none(Ok)) throw new Error(`non-exhaustive patterns: \`Ok(_)\` not covered`);
     if (Option.is_none(Err)) throw new Error(`non-exhaustive patterns: \`Err(_)\` not covered`);
-    return value.is_ok() ? Ok(value.value) : Err(value.error);
   }
 
   // handle Option.Some or Option.None
   else if (Option.is_option(value)) {
     const { Some, None } = config as OptionArms<unknown, unknown>;
 
-    if (value.is_some()) {
-      if (typeof Some === "function") return Some(value.value);
-    } else {
-      if (typeof None === "function") return None();
-    }
-
-    if (config[SYMBOL_WILDCARD] !== undefined) return config[SYMBOL_WILDCARD](value);
+    if (value.is_some() && typeof Some === "function") return Some(value.unwrap());
+    if (value.is_none() && typeof None === "function") return None();
 
     if (Option.is_none(Some)) throw new Error(`non-exhaustive patterns: \`Some(_)\` not covered`);
     if (Option.is_none(None)) throw new Error(`non-exhaustive patterns: \`None()\` not covered`);

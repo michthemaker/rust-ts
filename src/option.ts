@@ -1,17 +1,26 @@
+import { is_equal, PartialEq } from "./cmp/partial_eq";
+import { Result } from "./result";
+
 export const HIDDEN_OPTION_TAG = "rust-ts::std::Option<T>";
 
-interface OptionMethods<T> {
+interface OptionMethods<T> extends PartialEq<Option<T>> {
   is_some(): this is Some<T>;
   is_none(): this is None;
   unwrap(): T;
   expect(msg: string): T;
   unwrap_or(default_value: T): T;
   iter(): IterableIterator<T>;
+  /**
+   * Transforms the Option<T> into a Result<T, E>, mapping Some(v) to Ok(v) and None to Err(err).
+   */
+  ok_or<E>(err: E): Result<T, E>;
+  /**
+   * Transforms the Option<T> into a Result<T, E>, mapping Some(v) to Ok(v) and None to Err(err()).
+   */
+  ok_or_else<E>(err: () => E): Result<T, E>;
 }
 
-export interface Some<T> extends OptionMethods<T> {
-  readonly value: T;
-}
+export interface Some<T> extends OptionMethods<T> {}
 
 export interface None<T = unknown> extends OptionMethods<T> {}
 
@@ -21,6 +30,7 @@ const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 
 class OptionImpl<T> implements OptionMethods<T> {
   private some: boolean;
+  private value: T | undefined;
   [HIDDEN_OPTION_TAG] = true;
   [DEBUG](_depth: number, options: any, inspect: Function) {
     if (this.is_some()) {
@@ -31,8 +41,8 @@ class OptionImpl<T> implements OptionMethods<T> {
   }
   constructor(some: boolean, value: any) {
     this.some = some;
-    // @ts-ignore
     if (some === true) this.value = value;
+    Object.freeze(this);
   }
 
   is_some(): this is Some<T> {
@@ -59,6 +69,22 @@ class OptionImpl<T> implements OptionMethods<T> {
   unwrap_or(default_value: T): T {
     // @ts-ignore
     return this.some ? this.value : default_value;
+  }
+  ok_or<E>(err: E) {
+    return this.some ? Result.Ok(this.value!) : Result.Err(err);
+  }
+  ok_or_else<E>(f: () => E) {
+    return this.some ? Result.Ok(this.value!) : Result.Err(f());
+  }
+  eq(other: unknown): boolean {
+    if (Option.is_option(other)) {
+      if (other.is_some() && this.is_some() && is_equal(other.unwrap(), this.value)) return true;
+      else if (other.is_none() && this.is_none()) return true;
+      return false;
+    } else return false;
+  }
+  ne(other: unknown): boolean {
+    return !this.eq(other);
   }
 }
 

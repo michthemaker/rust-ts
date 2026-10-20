@@ -27,7 +27,7 @@ describe("FixedArray<T, N>", () => {
     const mapped = my_nums.map((v, i) => ({ index: i * i, v }));
     expect(mapped.len()).toBe(5);
     console.log(mapped);
-    expect(mapped.get(2).unwrap()).toEqual({ index: 4, v: "string" });
+    expect(mapped.get(2).unwrap()).to_equal({ index: 4, v: "string" });
   });
   test(".to_vec returns a Vec<T> of same length ", () => {
     const fixed_arr = FixedArray.from_fn(5, (i) => `${i} string`);
@@ -45,7 +45,7 @@ describe("FixedArray<T, N>", () => {
     expect(my_nums).not.toBe(cloned);
     console.log(my_nums, "\tmain");
     console.log(cloned, "\tcloned");
-    expect(my_nums.get(2).unwrap()).toEqual(cloned.get(2).unwrap());
+    expect(my_nums.get(2).unwrap()).to_equal(cloned.get(2).unwrap());
   });
   test("throws on .set index out of bounds", () => {
     function throws() {

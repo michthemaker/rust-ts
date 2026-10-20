@@ -5,3 +5,7 @@ export function derive_clone<T extends object>(self: T): T {
   for (const [k, v] of Object.entries(self)) copy[k] = clone_of(v); // deep, via the same helper
   return copy;
 }
+
+export interface Clone {
+  clone(): this;
+}

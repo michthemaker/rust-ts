@@ -1,6 +1,6 @@
 import { expect, test, describe } from "bun:test";
 import { vec, Vec } from "../src/vec";
-import { OnceLock } from "../src/sync/once-lock";
+import { OnceLock } from "../src/sync/once_lock";
 import { range } from "../src/range";
 import { inspect } from "bun";
 
@@ -85,7 +85,7 @@ describe("Vec<T>", () => {
   });
   test(".get call returns an Option<T>", () => {
     const my_nums = vec([new OnceLock(), 5]);
-    expect(my_nums.get(0).is_some()).toEqual(true);
+    expect(my_nums.get(0).is_some()).to_equal(true);
     console.log(my_nums.get(0));
   });
   test(".reserve throws on invalid `additional` argument", () => {
