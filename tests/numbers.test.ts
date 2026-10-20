@@ -377,6 +377,23 @@ describe("Sized numbers", () => {
         expect([b].join()).toBe("3");
       });
     });
+    describe("Serialization and output", () => {
+      const [a] = Tuple(d32("1"));
+      test("'JSON.stringify' gives a string, and 'd32(JSON.parse(...))' round-trips.", () => {
+        expect(JSON.stringify(a)).toBe(`"1"`);
+        expect(d32(JSON.parse(JSON.stringify(a)))).to_equal(a);
+      });
+      test("'util.inspect' and 'console.log' give 'd32(1.50)'.", () => {
+        const [a, b] = Tuple(d32("-1.920392"), d128("3"));
+        expect(inspect(a)).toBe(`d32(-1.920392)`);
+        expect(inspect(b)).toBe(`d128(3)`);
+      });
+      test("'structuredClone' loses the private mantissa, so a decimal can’t cross a thread boundary that way. Test your real cross-thread path (the JSON route)", () => {
+        const [a] = Tuple(d32("-1.920392"));
+        // decimals can't cross a thread boundary
+        expect(structuredClone(a)).to_equal({ kind: "d32", scale: 6 } as any);
+      });
+    });
   });
   test("'.is' on the in-range and out-of-range sides", () => {
     for (const t_and_e of unsigned_types_and_edges) {
