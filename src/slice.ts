@@ -1,9 +1,11 @@
-import { is_equal, PartialEq } from "./cmp/partial_eq";
+import { is_eq, PartialEq } from "./cmp/partial_eq";
 import { clone_of } from "../lib/clone";
 import { Option } from "./option";
 import { Result } from "./result";
 import type { Vec } from "./vec_impl";
 import { Range } from "./range";
+import { impl } from "./trait";
+import { Debug, FMT } from "./fmt";
 
 const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 const INDEX = /^(0|[1-9]\d*)$/;
@@ -57,14 +59,14 @@ function as_array<T>(src: Source<T>): readonly T[] {
  * Never copies on construction. Sub-slices share `buf`, so mutation through
  * one view is visible in the owner (and in every overlapping view).
  */
-export class Slice<T> implements PartialEq<Source<T>> {
+export class Slice<T> extends impl(PartialEq<Source<any>>, Debug) {
   protected buf: T[];
   protected start: number;
   protected _len: number;
   /** throws if this view is no longer valid (set by owners that can restructure, like Vec) */
   protected guard?: () => void;
 
-  [DEBUG](_depth: number, options: any, inspect: Function) {
+  [FMT](_depth: number, options: any, inspect: Function) {
     try {
       this.guard?.();
     } catch {
@@ -75,6 +77,7 @@ export class Slice<T> implements PartialEq<Source<T>> {
   }
 
   constructor(buf: T[], start: number, len: number, guard?: () => void) {
+    super();
     this.buf = buf;
     this.start = start;
     this._len = len;
@@ -90,7 +93,7 @@ export class Slice<T> implements PartialEq<Source<T>> {
           return target.buf[target.start + index];
         }
         const value = Reflect.get(target, prop);
-        return typeof value === "function" ? value.bind(target) : value;
+        return typeof value === "function" ? (value as any).bind(target) : value;
       },
       set(target, prop, value) {
         target.guard?.();
@@ -228,7 +231,7 @@ export class Slice<T> implements PartialEq<Source<T>> {
 
   public contains(value: T): boolean {
     for (let i = 0; i < this._len; i++) {
-      if (is_equal(this.buf[this.start + i], value)) return true;
+      if (is_eq(this.buf[this.start + i], value)) return true;
     }
     return false;
   }
@@ -237,7 +240,7 @@ export class Slice<T> implements PartialEq<Source<T>> {
     const n = as_array(needle);
     if (n.length > this._len) return false;
     for (let i = 0; i < n.length; i++) {
-      if (!is_equal(this.buf[this.start + i], n[i])) return false;
+      if (!is_eq(this.buf[this.start + i], n[i])) return false;
     }
     return true;
   }
@@ -247,7 +250,7 @@ export class Slice<T> implements PartialEq<Source<T>> {
     if (n.length > this._len) return false;
     const offset = this._len - n.length;
     for (let i = 0; i < n.length; i++) {
-      if (!is_equal(this.buf[this.start + offset + i], n[i])) return false;
+      if (!is_eq(this.buf[this.start + offset + i], n[i])) return false;
     }
     return true;
   }
@@ -409,14 +412,14 @@ export class Slice<T> implements PartialEq<Source<T>> {
     if (other instanceof Slice) {
       if (other._len !== this._len) return false;
       for (let i = 0; i < this._len; i++) {
-        if (!is_equal(this.buf[this.start + i], other.buf[other.start + i])) return false;
+        if (!is_eq(this.buf[this.start + i], other.buf[other.start + i])) return false;
       }
       return true;
     }
     if (Array.isArray(other)) {
       if (other.length !== this._len) return false;
       for (let i = 0; i < this._len; i++) {
-        if (!is_equal(this.buf[this.start + i], other[i])) return false;
+        if (!is_eq(this.buf[this.start + i], other[i])) return false;
       }
       return true;
     }

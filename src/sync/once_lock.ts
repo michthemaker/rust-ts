@@ -1,8 +1,9 @@
-import { is_equal, PartialEq } from "../cmp/partial_eq.ts";
+import { is_eq, PartialEq } from "../cmp/partial_eq.ts";
 import { Debug, FMT, FmtOptions } from "../fmt.ts";
 import { Result } from "../result.ts";
+import { impl } from "../trait.ts";
 
-class OnceLock<T> implements PartialEq<OnceLock<T>>, Debug {
+class OnceLock<T> extends impl(PartialEq, Debug) {
   #value: T | null = null;
   #is_locked: boolean = false;
 
@@ -27,13 +28,13 @@ class OnceLock<T> implements PartialEq<OnceLock<T>>, Debug {
     }
   }
 
-  eq(other: unknown): boolean {
+  eq(other: OnceLock<T>): boolean {
     if (other instanceof OnceLock) {
-      return is_equal(this.#value, other.get());
+      return is_eq(this.#value, other.get());
     } else return false;
   }
 
-  ne(other: unknown): boolean {
+  ne(other: OnceLock<T>): boolean {
     return !this.eq(other);
   }
 }

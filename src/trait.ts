@@ -372,6 +372,17 @@ type Derived<T extends Trait | TypeFactory<Trait> | Cons> =
         ? T
         : never;
 
+/**  the instance type a trait value (or trait type factory) describes
+ * TraitInstance<typeof PartialEq<T>>
+ *
+ */
+export type TraitInstance<T extends Trait | TypeFactory<Trait>> =
+  T extends TypeFactory<Trait>
+    ? DerivedType<ReturnType<T>>
+    : T extends Trait
+      ? DerivedType<T>
+      : never;
+
 /*  API: type guard for checking whether class instance implements a trait  */
 export function impls<T extends Trait | TypeFactory<Trait> | Cons>(
   instance: unknown,

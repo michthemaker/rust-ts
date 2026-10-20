@@ -1,6 +1,6 @@
 import { Option } from "./option";
 import { define_pattern, Pattern } from "./match";
-import { is_equal } from "./cmp/partial_eq";
+import { is_eq } from "./cmp/partial_eq";
 import { Vec as Impl } from "./vec_impl";
 
 // Numeric Indexable<T> interface
@@ -46,7 +46,7 @@ Pattern.Vec = function (expected) {
   return define_pattern("rust-ts::std::Vec<T>", (subject: any) => {
     if (subject && subject instanceof Impl) {
       const current = subject.to_array();
-      if (is_equal(current, expected)) return Option.Some([current]);
+      if (is_eq(current, expected)) return Option.Some([current]);
     }
     return Option.None();
   });

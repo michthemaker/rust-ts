@@ -1,4 +1,4 @@
-import { is_equal } from "./cmp/partial_eq";
+import { is_eq } from "./cmp/partial_eq";
 import { clone_of } from "../lib/clone";
 import { Option } from "./option";
 import { range } from "./range";
@@ -6,10 +6,10 @@ import { FixedArray } from "./fixed_array";
 import { Result } from "./result";
 import { register_vec_factory, resolve_range, Slice } from "./slice";
 import { type Range } from "./range";
+import { FMT } from "./fmt";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295; // 2^32 - 1
 
-const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 const INDEX = /^(0|[1-9]\d*)$/;
 
 export class Vec<T> extends Slice<T> {
@@ -19,7 +19,7 @@ export class Vec<T> extends Slice<T> {
   /** the Vec as the caller sees it (the index proxy), for methods that hand `self` back */
   private outer!: Vec<T>;
 
-  [DEBUG](_depth: number, options: any, inspect: Function) {
+  [FMT](_depth: number, options: any, inspect: Function) {
     const first_half = this.buf.slice(0, this._len);
     const uninits = this._capacity - this._len;
 
@@ -57,7 +57,7 @@ export class Vec<T> extends Slice<T> {
           }
         }
         const value = Reflect.get(target, prop);
-        return typeof value === "function" ? value.bind(target) : value;
+        return typeof value === "function" ? (value as Function).bind(target) : value;
       },
       set(target, prop, value): boolean {
         if (typeof prop === "string" && INDEX.test(prop)) {
@@ -323,12 +323,12 @@ export class Vec<T> extends Slice<T> {
 
   /** Removes consecutive elements whose keys are equal. */
   public dedup_by_key<K>(key: (item: T) => K): void {
-    this.dedup_by((a, b) => is_equal(key(a), key(b)));
+    this.dedup_by((a, b) => is_eq(key(a), key(b)));
   }
 
   /** Removes consecutive repeated elements, compared by value. */
   public dedup(): void {
-    this.dedup_by((a, b) => is_equal(a, b));
+    this.dedup_by((a, b) => is_eq(a, b));
   }
 
   /** Writes `kept` over the front of the buffer when it is shorter than the current contents. */

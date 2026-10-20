@@ -1,10 +1,15 @@
-export interface Debug {
-  [FMT](
-    depth: number,
-    options: FmtOptions,
-    inspect: (arg: any, options: FmtOptions) => string,
-  ): string;
-}
+import { trait } from "./trait";
+
+export const Debug = trait((b) => {
+  abstract class Debug extends b {
+    abstract [FMT](
+      depth: number,
+      options: FmtOptions,
+      inspect: (arg: any, options: FmtOptions) => string,
+    ): string;
+  }
+  return Debug;
+});
 
 export type FmtOptions = {
   /**

@@ -1,9 +1,11 @@
-import { is_equal, PartialEq } from "./cmp/partial_eq";
+import { is_eq, PartialEq } from "./cmp/partial_eq";
+import { Debug, FMT } from "./fmt";
 import { Result } from "./result";
+import { impl, TraitInstance } from "./trait";
 
 export const HIDDEN_OPTION_TAG = "rust-ts::std::Option<T>";
 
-interface OptionMethods<T> extends PartialEq<Option<T>> {
+interface OptionMethods<T> extends TraitInstance<typeof PartialEq<Option<T>>> {
   is_some(): this is Some<T>;
   is_none(): this is None;
   unwrap(): T;
@@ -26,13 +28,11 @@ export interface None<T = unknown> extends OptionMethods<T> {}
 
 export type Option<T> = Some<T> | None<T>;
 
-const DEBUG = Symbol.for("nodejs.util.inspect.custom");
-
-class OptionImpl<T> implements OptionMethods<T> {
+class OptionImpl<T> extends impl(PartialEq<any>, Debug) implements OptionMethods<T> {
   private some: boolean;
   private value: T | undefined;
   [HIDDEN_OPTION_TAG] = true;
-  [DEBUG](_depth: number, options: any, inspect: Function) {
+  [FMT](_depth: number, options: any, inspect: Function) {
     if (this.is_some()) {
       return `Some(${inspect(this.value, options)})`;
     } else {
@@ -40,6 +40,7 @@ class OptionImpl<T> implements OptionMethods<T> {
     }
   }
   constructor(some: boolean, value: any) {
+    super();
     this.some = some;
     if (some === true) this.value = value;
     Object.freeze(this);
@@ -78,7 +79,7 @@ class OptionImpl<T> implements OptionMethods<T> {
   }
   eq(other: unknown): boolean {
     if (Option.is_option(other)) {
-      if (other.is_some() && this.is_some() && is_equal(other.unwrap(), this.value)) return true;
+      if (other.is_some() && this.is_some() && is_eq(other.unwrap(), this.value)) return true;
       else if (other.is_none() && this.is_none()) return true;
       return false;
     } else return false;

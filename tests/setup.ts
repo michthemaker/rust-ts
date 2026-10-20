@@ -1,9 +1,9 @@
 import { expect } from "bun:test";
-import { is_equal } from "../src/cmp/partial_eq.ts";
+import { is_eq } from "../src/cmp/partial_eq.ts";
 
 expect.extend({
   to_equal(received, expected) {
-    const pass = is_equal(received, expected);
+    const pass = is_eq(received, expected);
     if (pass) {
       return {
         pass: true,

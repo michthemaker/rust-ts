@@ -1,9 +1,11 @@
-import { is_equal, PartialEq } from "./cmp/partial_eq";
+import { is_eq, PartialEq } from "./cmp/partial_eq";
+import { Debug, FMT } from "./fmt";
 import { Option } from "./option";
+import { impl, TraitInstance } from "./trait";
 
 export const HIDDEN_RESULT_TAG = "rust-ts::std::Result<T, E>";
 
-interface ResultMethods<T, E> extends PartialEq<Result<T, E>> {
+interface ResultMethods<T, E> extends TraitInstance<typeof PartialEq<Result<T, E>>> {
   is_ok(): this is Ok<T, E>;
   is_err(): this is Err<T, E>;
   unwrap(): T;
@@ -31,21 +33,20 @@ export interface Err<T, E> extends ResultMethods<T, E> {}
 
 export type Result<T, E> = Ok<T, E> | Err<T, E>;
 
-const DEBUG = Symbol.for("nodejs.util.inspect.custom");
-
-class ResultImpl<T, E> implements ResultMethods<T, E> {
+class ResultImpl<T, E> extends impl(PartialEq<any>, Debug) implements ResultMethods<T, E> {
   // we will leave these as private so that equality checkers can work
   private result_ok: boolean;
   private value: T | undefined;
   private error: E | undefined;
   [HIDDEN_RESULT_TAG] = true;
   constructor(ok: boolean, value_or_error: any) {
+    super();
     this.result_ok = ok;
     if (ok === true) this.value = value_or_error;
     else this.error = value_or_error;
     Object.freeze(this);
   }
-  [DEBUG](_depth: number, options: any, inspect: Function) {
+  [FMT](_depth: number, options: any, inspect: Function) {
     if (this.is_ok()) {
       return `Ok(${inspect(this.value, options)})`;
     } else {
@@ -91,8 +92,8 @@ class ResultImpl<T, E> implements ResultMethods<T, E> {
   }
   eq(other: unknown): boolean {
     if (Result.is_result(other)) {
-      if (other.is_ok() && this.is_ok() && is_equal(other.unwrap(), this.value)) return true;
-      else if (other.is_err() && this.is_err() && is_equal(other.unwrap_err(), this.error))
+      if (other.is_ok() && this.is_ok() && is_eq(other.unwrap(), this.value)) return true;
+      else if (other.is_err() && this.is_err() && is_eq(other.unwrap_err(), this.error))
         return true;
       return false;
     } else return false;

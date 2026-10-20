@@ -1,4 +1,4 @@
-import { is_equal } from "./cmp/partial_eq";
+import { is_eq } from "./cmp/partial_eq";
 import { define_pattern, Pattern } from "./match";
 import { Option } from "./option";
 import { FixedArray as Impl } from "./fixed_array_impl";
@@ -33,7 +33,7 @@ Pattern.FixedArray = function (expected) {
   return define_pattern("rust-ts::std::FixedArray<T, N>", (subject: any) => {
     if (subject && subject instanceof Impl) {
       const current = subject.to_array();
-      if (is_equal(current, expected)) return Option.Some([subject]);
+      if (is_eq(current, expected)) return Option.Some([subject]);
     }
     return Option.None();
   });

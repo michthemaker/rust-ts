@@ -1,18 +1,18 @@
 import { clone_of } from "../lib/clone";
+import { FMT } from "./fmt";
 import { range } from "./range";
 import { Slice } from "./slice";
 import { vec } from "./vec";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295;
 const INDEX = /^(0|[1-9]\d*)$/;
-const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 
 function panic(msg: string): never {
   throw new Error(msg);
 }
 
 export class FixedArray<T, N extends number> extends Slice<T> {
-  [DEBUG](_depth: number, options: any, inspect: Function) {
+  [FMT](_depth: number, options: any, inspect: Function) {
     const formatted_elements = this.buf.map((item) => inspect(item, options));
 
     return `FixedArray(${this._len})[${formatted_elements.join(", ")}]`;
@@ -35,7 +35,7 @@ export class FixedArray<T, N extends number> extends Slice<T> {
           return target.buf[target.start + index];
         }
         const value = Reflect.get(target, prop);
-        return typeof value === "function" ? value.bind(target) : value;
+        return typeof value === "function" ? (value as Function).bind(target) : value;
       },
       set(target, prop, value): boolean {
         if (typeof prop === "string" && INDEX.test(prop)) {

@@ -1,7 +1,9 @@
 import { Prettify } from "../lib/types";
 import { PartialEq } from "./cmp/partial_eq";
+import { Debug, FMT } from "./fmt";
 import { match } from "./match";
 import { Result } from "./result";
+import { impl } from "./trait";
 
 export type Int<K extends string> = number & { readonly __num?: K };
 export type UInt<K extends string> = number & { readonly __num?: K };
@@ -735,8 +737,6 @@ export interface D128 extends Prettify<DecimalType<d128>> {
 
 // ----------------------------------------------------------------- runtime
 
-const DEBUG: unique symbol = Symbol.for("nodejs.util.inspect.custom");
-
 const LIMITS: Record<DecimalKind, Limits> = {
   d32: D32_LIMITS,
   d64: D64_LIMITS,
@@ -768,7 +768,8 @@ type Operand = { readonly mantissa: bigint; readonly scale: number };
 // The method signatures are on the Decimal interface (they are too generic for the class
 // to implement), so the class only promises the plain members. `make` does the cast.
 class DecimalImpl<K extends DecimalKind, S extends number>
-  implements Pick<Decimal<K, S>, "kind" | "scale" | "to_string" | "toJSON">, PartialEq<any>
+  extends impl(PartialEq<any>, Debug)
+  implements Pick<Decimal<K, S>, "kind" | "scale" | "to_string" | "toJSON">
 {
   /** the digits as a signed whole number: "-1.50" has mantissa -150n */
   readonly #mantissa: bigint;
@@ -778,6 +779,7 @@ class DecimalImpl<K extends DecimalKind, S extends number>
     mantissa: bigint,
     readonly scale: S,
   ) {
+    super();
     this.#mantissa = mantissa;
     Object.freeze(this);
   }
@@ -921,7 +923,7 @@ class DecimalImpl<K extends DecimalKind, S extends number>
     );
   }
 
-  [DEBUG](): string {
+  [FMT](): string {
     return `${this.kind}(${this.to_string()})`;
   }
 }

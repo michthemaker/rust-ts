@@ -1,16 +1,22 @@
-export interface PartialEq<T> {
-  eq(other: T): boolean;
-  ne(other: T): boolean;
-}
+import { impls, trait } from "../trait";
+
+export const PartialEq = <T>() =>
+  trait((b) => {
+    abstract class PartialEq extends b {
+      abstract eq(other: T): boolean;
+      abstract ne(other: T): boolean;
+    }
+    return PartialEq;
+  });
 
 /**
  * Deep equality on any two values.
  *
- * @remarks A value whose class defines `eq` (the PartialEq contract) decides for itself, so private state counts too.
+ * @remarks `eq` is called on a value whose class implements `PartialEq` trait
  * @remarks Errors are equal when their class, name, message and cause match. The stack is ignored.
  * @remarks Everything else is compared structurally: primitives, dates, regexps, arrays, sets, maps and plain objects.
  */
-export function is_equal(a: any, b: any): boolean {
+export function is_eq(a: any, b: any): boolean {
   // 1. Primitive Identity & Matching Reference Identity
   if (a === b) return true;
 
@@ -25,7 +31,7 @@ export function is_equal(a: any, b: any): boolean {
   }
 
   // 4. Custom equality (PartialEq): the type decides. Only reached for two values of the same class.
-  if (typeof a.eq === "function") return a.eq(b);
+  if (impls(a, PartialEq)) return a.eq(b);
 
   // 5. Structural Verification based on Prototypes
   if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false;
@@ -41,10 +47,10 @@ export function is_equal(a: any, b: any): boolean {
     return (
       a.name === b.name &&
       a.message === b.message &&
-      is_equal(a.cause, b.cause) &&
+      is_eq(a.cause, b.cause) &&
       (typeof AggregateError === "undefined" ||
         !(a instanceof AggregateError) ||
-        is_equal(a.errors, b.errors)) &&
+        is_eq(a.errors, b.errors)) &&
       own_fields_equal(a, b) // custom fields such as `code`
     );
   }
@@ -53,7 +59,7 @@ export function is_equal(a: any, b: any): boolean {
   if (Array.isArray(a)) {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) {
-      if (!is_equal(a[i], b[i])) return false;
+      if (!is_eq(a[i], b[i])) return false;
     }
     return true;
   }
@@ -65,7 +71,7 @@ export function is_equal(a: any, b: any): boolean {
     for (const itemA of a) {
       let found = false;
       for (const itemB of b) {
-        if (is_equal(itemA, itemB)) {
+        if (is_eq(itemA, itemB)) {
           found = true;
           break;
         }
@@ -82,7 +88,7 @@ export function is_equal(a: any, b: any): boolean {
       let foundKeyB = false;
       // Maps check structural keys as well as structural values
       for (const [keyB, valB] of b.entries()) {
-        if (is_equal(keyA, keyB) && is_equal(valA, valB)) {
+        if (is_eq(keyA, keyB) && is_eq(valA, valB)) {
           foundKeyB = true;
           break;
         }
@@ -96,6 +102,13 @@ export function is_equal(a: any, b: any): boolean {
   return own_fields_equal(a, b);
 }
 
+/**
+ * Deep not equality on any two values.
+ */
+export function is_ne(a: any, b: any): boolean {
+  return !is_eq(a, b);
+}
+
 /** the own enumerable fields of both objects are the same keys with deeply equal values */
 function own_fields_equal(a: any, b: any): boolean {
   const keysA = Object.keys(a);
@@ -104,7 +117,7 @@ function own_fields_equal(a: any, b: any): boolean {
   if (keysA.length !== keysB.length) return false;
 
   for (const key of keysA) {
-    if (!Object.prototype.hasOwnProperty.call(b, key) || !is_equal(a[key], b[key])) {
+    if (!Object.prototype.hasOwnProperty.call(b, key) || !is_eq(a[key], b[key])) {
       return false;
     }
   }

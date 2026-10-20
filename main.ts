@@ -1,10 +1,9 @@
-import { is_equal } from "./src/cmp/partial_eq.ts";
+import { is_eq } from "./src/cmp/partial_eq.ts";
 import { FixedArray } from "./src/fixed_array.ts";
 import "./src/globals.ts";
 import { match } from "./src/match.ts";
 import { Option } from "./src/option.ts";
 import { Result } from "./src/result.ts";
-import { impl, impls, trait } from "./src/trait.ts";
 import { vec } from "./src/vec.ts";
 
 export function main() {
@@ -28,12 +27,12 @@ export function main() {
   const ERR_CLOSED = new Error("Channel closed");
   const ERR_CLOSED_NO_RX = new Error("Channel closed (No Receivers)");
 
-  console.log(is_equal(Result.Err(ERR_CLOSED), Result.Err(ERR_CLOSED_NO_RX)), "the error one");
+  console.log(is_eq(Result.Err(ERR_CLOSED), Result.Err(ERR_CLOSED_NO_RX)), "the error one");
 
-  console.log(is_equal(Result.Ok(1), Result.Ok(3202)));
-  console.log(is_equal(Result.Ok(1), Result.Ok(1)));
-  console.log(is_equal(Option.Some(1), Option.Some(3202)));
-  console.log(is_equal(Option.Some(1), Option.Some(1)));
+  console.log(is_eq(Result.Ok(1), Result.Ok(3202)));
+  console.log(is_eq(Result.Ok(1), Result.Ok(1)));
+  console.log(is_eq(Option.Some(1), Option.Some(3202)));
+  console.log(is_eq(Option.Some(1), Option.Some(1)));
 
   console.log(Option.Some(93920).ok_or("slels"));
   console.log(Result.Ok(39202).ok());
@@ -43,34 +42,15 @@ export function main() {
 
   console.log("-------");
   console.log(d32("2929.00").eq(d32("0.299")));
-  console.log(is_equal(vec([0, 0, 0, 0]), new FixedArray(29, 4)));
-  console.log(is_equal(new FixedArray(29, 4), new FixedArray(29, 4)));
+  console.log(is_eq(vec([0, 0, 0, 0]), new FixedArray(29, 4)));
+  console.log(is_eq(new FixedArray(29, 4), new FixedArray(29, 4)));
 
-  console.log(is_equal(Result.Err("sl"), Result.Err("sl")));
-  console.log(is_equal(Option.None(), Option.None()));
+  console.log(is_eq(Result.Err("sl"), Result.Err("sl")));
+  console.log(is_eq(Option.None(), Option.None()));
 }
 
-const Debug = trait((base) => {
-  abstract class Debug extends base {
-    abstract fmt(): void;
-  }
-  return Debug;
-});
-const PartialEq = <T>() =>
-  trait((base) => {
-    return class PartialEq extends base {
-      fmt(name: T) {
-        console.log(name);
-        console.log("me");
-      }
-    };
-  });
+console.log(vec([0, 29, 290]));
 
-class Decimal extends impl(Debug) {
-  fmt(): void {}
-}
-
-const dec = new Decimal();
-dec.fmt();
-console.log(impls(dec, Debug));
-console.log(impls(dec, PartialEq<any>));
+// solve this bug later
+// console.log(Tuple(0, Tuple(0)));
+// console.log(FixedArray.from_fn(5, () => Tuple(0, 0)));

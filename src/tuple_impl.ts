@@ -1,12 +1,18 @@
-const DEBUG = Symbol.for("nodejs.util.inspect.custom");
+import { Debug, FMT, FmtOptions } from "./fmt";
+import { impl } from "./trait";
+
 const INDEX = /^(0|[1-9]\d*)$/;
 
 function panic(msg: string): never {
   throw new Error(msg);
 }
-export class Tuple {
+export class Tuple extends impl(Debug) {
   #buf: any[];
-  [DEBUG](_depth: number, options: any, inspect: Function) {
+  [FMT](
+    _depth: number,
+    options: FmtOptions,
+    inspect: (arg: any, options: FmtOptions) => string,
+  ): string {
     const items = this.#buf.map((item) => inspect(item, options));
     return `(${items.join(", ")})`;
   }
@@ -17,6 +23,7 @@ export class Tuple {
   }
 
   constructor(args: any[]) {
+    super();
     this.#buf = args;
     const buffer = this.#buf;
     Object.freeze(this);
@@ -30,7 +37,7 @@ export class Tuple {
           return buffer[index];
         }
         const value = Reflect.get(target, prop);
-        return typeof value === "function" ? value.bind(target) : value;
+        return typeof value === "function" ? (value as Function).bind(target) : value;
       },
       set(_target, prop, _value) {
         // Instead of silently failing (returning false),

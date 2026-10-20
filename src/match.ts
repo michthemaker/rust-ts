@@ -1,4 +1,4 @@
-import { is_equal } from "./cmp/partial_eq";
+import { is_eq } from "./cmp/partial_eq";
 import { Option } from "./option";
 import { Result } from "./result";
 
@@ -47,27 +47,27 @@ export function define_pattern<K extends string>(label: K, validate: Validator):
 const Pattern: PatternInterface = {
   Val(val) {
     return define_pattern("rust-ts::std::match::Val<T>", (s) =>
-      is_equal(val, s) ? Option.Some([]) : Option.None(),
+      is_eq(val, s) ? Option.Some([]) : Option.None(),
     );
   },
   _: SYMBOL_WILDCARD,
   Some(val) {
     return define_pattern("rust-ts::std::Some<T>", (s) =>
-      Option.is_option(s) && s.is_some() && is_equal(val, s.unwrap())
+      Option.is_option(s) && s.is_some() && is_eq(val, s.unwrap())
         ? Option.Some([s.unwrap()])
         : Option.None(),
     );
   },
   Ok(val) {
     return define_pattern("rust-ts::std::Ok<T, E>", (s) =>
-      Result.is_result(s) && s.is_ok() && is_equal(val, s.unwrap())
+      Result.is_result(s) && s.is_ok() && is_eq(val, s.unwrap())
         ? Option.Some([s.unwrap()])
         : Option.None(),
     );
   },
   Err(val) {
     return define_pattern("rust-ts::std::Err<T, E>", (s) =>
-      Result.is_result(s) && s.is_err() && is_equal(val, s.unwrap_err())
+      Result.is_result(s) && s.is_err() && is_eq(val, s.unwrap_err())
         ? Option.Some([s.unwrap_err()])
         : Option.None(),
     );
