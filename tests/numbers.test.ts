@@ -343,8 +343,7 @@ describe("Sized numbers", () => {
         const [a, b, c] = Tuple(d32("1"), d64("1"), d128("1"));
         // @ts-expect-error
         expect(() => (a.kind = "d64")).toThrow();
-        // @ts-expect-error
-        expect(() => (b.kind = "d32")).toThrow();
+        // @ts-expect-erro        expect(() => (b.kind = "d32")).toThrow();
         // @ts-expect-error
         expect(() => (c.kind = "d32")).toThrow();
         // @ts-expect-error
@@ -353,6 +352,29 @@ describe("Sized numbers", () => {
         expect(b.mantissa).toBe(undefined);
         // @ts-expect-error
         expect(c.mantissa).toBe(undefined);
+      });
+    });
+    describe("The 'no operators' promise", () => {
+      test("'a + b', 'a < b', '+a', 'Number(a)', 'a + \"\"', 'a == \"1.50\"' and 'a * 2' all throw 'TypeError' at runtime.", () => {
+        const [a, b] = Tuple(d32("1"), d32("3"));
+
+        // @ts-expect-error
+        expect(() => a + b).toThrow(TypeError);
+        expect(() => a < b).toThrow(TypeError);
+        expect(() => +a).toThrow(TypeError);
+        expect(() => Number(a)).toThrow(TypeError);
+        expect(() => a + "").toThrow(TypeError);
+        // @ts-expect-error
+        expect(() => a == "1.50").toThrow(TypeError);
+        // @ts-expect-error
+        expect(() => a * 2).toThrow(TypeError);
+      });
+      test("'${a}' and 'String(a)' still work. '[a].join()' also works, so check that. A comparator-less 'sort()' converts to strings and compares them as text, which is a trap worth pinning.", () => {
+        const [a, b] = Tuple(d32("1"), d128("3"));
+
+        expect(`${a}`).toBe("1");
+        expect(String(b)).toBe("3");
+        expect([b].join()).toBe("3");
       });
     });
   });
