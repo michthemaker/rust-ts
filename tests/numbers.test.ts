@@ -394,6 +394,31 @@ describe("Sized numbers", () => {
         expect(structuredClone(a)).to_equal({ kind: "d32", scale: 6 } as any);
       });
     });
+    describe("Compile time checks remove the @ts-expect-error comments to check them", () => {
+      test("Bad literals error with the right message type: format, places and digits", () => {
+        // @ts-expect-error
+        () => d32(1.3);
+        // @ts-expect-error
+        () => d32(100n);
+        // @ts-expect-error
+        () => d32("aleian");
+      });
+      test("'d32('0.10000')' is 'd32<5>', and the result scales come out right ('d32<5>', sum of scales for 'mul').", () => {
+        () => d32("0.1000");
+      });
+      test("A 'mul' whose scale would exceed the limit is an error.", () => {
+        // @ts-expect-error
+        () => d32("0.299302").mul(d32("2.2929"));
+      });
+      test("Mixing kinds, 'add(1.5)' and 'a + b' are errors.", () => {
+        // @ts-expect-error
+        () => d32("0.299302").add(d128("2.2929"));
+      });
+      test("A non-literal 'string' is allowed, since it’s checked at runtime.", () => {
+        // @ts-expect-error
+        () => d32("aleian");
+      });
+    });
   });
   test("'.is' on the in-range and out-of-range sides", () => {
     for (const t_and_e of unsigned_types_and_edges) {
