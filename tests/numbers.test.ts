@@ -267,6 +267,63 @@ describe("Sized numbers", () => {
         expect(() => d128("10000000000000000000000000").div(9)).toThrow(/the result never ends/i);
       });
     });
+    describe("Argument handling", () => {
+      test("Integers via 'number', 'bigint' and the sized types; floats, 'NaN' and 'Infinity' throw 'TypeError'", () => {
+        const errorables = Tuple(1, 320n, 0.2, NaN, Infinity);
+        for (let errorable of errorables) {
+          // @ts-expect-error
+          expect(() => d32(errorable)).toThrow();
+          // @ts-expect-error
+          expect(() => d64(errorable)).toThrow();
+          // @ts-expect-error
+          expect(() => d128(errorable)).toThrow();
+        }
+      });
+      test("Strings, 'null', 'undefined' and plain objects throw", () => {
+        const errorables = Tuple(String(), "nameing", null, undefined, { name: "joh" });
+        for (let errorable of errorables) {
+          // @ts-expect-error
+          expect(() => d32(errorable)).toThrow();
+          // @ts-expect-error
+          expect(() => d64(errorable)).toThrow();
+          // @ts-expect-error
+          expect(() => d128(errorable)).toThrow();
+        }
+      });
+      test("A forged '{ kind, scale }' lookalike is rejected, since it fails the '#mantissa in other' check.", () => {
+        const values = Tuple(
+          // this one has a fake private mantissa field but fails too
+          Tuple(d32("0.5"), { kind: "d32", scale: 5, "#mantissa": 0 }),
+          Tuple(d64("0.5"), { kind: "d64", scale: 5 }),
+          Tuple(d128("0.5"), { kind: "d128", scale: 5 }),
+        );
+        for (let t of values) {
+          const [dec, fake_dec] = t;
+          // @ts-expect-error
+          expect(() => dec.add(fake_dec)).toThrow(TypeError);
+        }
+      });
+      test("Mixing kinds throws for the arithmetic methods, and 'eq' only errors at compile time", () => {
+        const [dec_a, dec_b, dec_c] = Tuple(d32("0.5"), d64("0.67"), d128("0.290"));
+        const arithmetics = Tuple("add", "sub", "mul", "div", "rem");
+        for (let arit of arithmetics) {
+          // @ts-expect-error
+          expect(() => dec_a[arit](dec_b)).toThrow(/cannot mix/i);
+          // @ts-expect-error
+          expect(() => dec_b[arit](dec_c)).toThrow(/cannot mix/i);
+          // @ts-expect-error
+          expect(() => dec_c[arit](dec_a)).toThrow(/cannot mix/i);
+        }
+
+        // eq
+        // @ts-expect-error
+        expect(() => dec_a.eq(dec_b)).not.toThrow();
+        // @ts-expect-error
+        expect(() => dec_b.eq(dec_c)).not.toThrow();
+        // @ts-expect-error
+        expect(() => dec_c.eq(dec_a)).not.toThrow();
+      });
+    });
   });
   test("'.is' on the in-range and out-of-range sides", () => {
     for (const t_and_e of unsigned_types_and_edges) {
