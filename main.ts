@@ -4,6 +4,7 @@ import "./src/globals.ts";
 import { match } from "./src/match.ts";
 import { Option } from "./src/option.ts";
 import { Result } from "./src/result.ts";
+import { impl, impls, trait } from "./src/trait.ts";
 import { vec } from "./src/vec.ts";
 
 export function main() {
@@ -49,4 +50,27 @@ export function main() {
   console.log(is_equal(Option.None(), Option.None()));
 }
 
-console.log(d32.is("2"), d32("3"));
+const Debug = trait((base) => {
+  abstract class Debug extends base {
+    abstract fmt(): void;
+  }
+  return Debug;
+});
+const PartialEq = <T>() =>
+  trait((base) => {
+    return class PartialEq extends base {
+      fmt(name: T) {
+        console.log(name);
+        console.log("me");
+      }
+    };
+  });
+
+class Decimal extends impl(Debug) {
+  fmt(): void {}
+}
+
+const dec = new Decimal();
+dec.fmt();
+console.log(impls(dec, Debug));
+console.log(impls(dec, PartialEq<any>));
