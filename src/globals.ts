@@ -23,7 +23,6 @@ declare global {
   type f32 = SizedNumbers.f32;
   type f64 = SizedNumbers.f64;
 
-  // decimal
   /**
    * Exact decimal with up to 8 significant digits and 8 decimal places.
    *

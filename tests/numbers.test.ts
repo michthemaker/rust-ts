@@ -324,6 +324,37 @@ describe("Sized numbers", () => {
         expect(() => dec_c.eq(dec_a)).not.toThrow();
       });
     });
+    describe("Equality and immutability", () => {
+      test("'eq' ignores scale ('1.0' equals '1.00') and works against integers.", () => {
+        expect(d32("1.0").eq(d32("1.00"))).toBe(true);
+        expect(d64("1.0").eq(d64("1.00"))).toBe(true);
+        expect(d128("1.0").eq(d128("1.00"))).toBe(true);
+      });
+      test("Every method returns a new value and leaves the original unchanged.", () => {
+        const [a, b, c] = Tuple(d32("1"), d64("1"), d128("1"));
+        a.add(8);
+        expect(a.eq(d32("1"))).toBe(true);
+        b.add(8);
+        expect(b.eq(d64("1"))).toBe(true);
+        c.add(8);
+        expect(c.eq(d128("1"))).toBe(true);
+      });
+      test("The object is frozen, so assigning to 'kind' or 'scale' throws, and the mantissa isn’t reachable.", () => {
+        const [a, b, c] = Tuple(d32("1"), d64("1"), d128("1"));
+        // @ts-expect-error
+        expect(() => (a.kind = "d64")).toThrow();
+        // @ts-expect-error
+        expect(() => (b.kind = "d32")).toThrow();
+        // @ts-expect-error
+        expect(() => (c.kind = "d32")).toThrow();
+        // @ts-expect-error
+        expect(a.mantissa).toBe(undefined);
+        // @ts-expect-error
+        expect(b.mantissa).toBe(undefined);
+        // @ts-expect-error
+        expect(c.mantissa).toBe(undefined);
+      });
+    });
   });
   test("'.is' on the in-range and out-of-range sides", () => {
     for (const t_and_e of unsigned_types_and_edges) {
