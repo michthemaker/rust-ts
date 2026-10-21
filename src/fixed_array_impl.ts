@@ -2,7 +2,7 @@ import { clone_of } from "./clone";
 import { FMT } from "./fmt";
 import { range } from "./range";
 import { Slice } from "./slice";
-import { vec } from "./vec";
+import { Vec, vec } from "./vec";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295;
 const INDEX = /^(0|[1-9]\d*)$/;
@@ -71,15 +71,6 @@ export class FixedArray<T, N extends number> extends Slice<T> {
     return vec(this.buf);
   }
 
-  public clone() {
-    const copy = new FixedArray<T, N>(undefined as T, this._len as N);
-    for (let i of range(0, this._len)) {
-      const item = this.buf[i];
-      copy[i] = clone_of(item);
-    }
-    return copy;
-  }
-
   // array only transform
   public map<U>(f: MapTransformFn<T, U>) {
     const new_fixed = new FixedArray<U, N>(undefined as U, this._len as N);
@@ -87,6 +78,23 @@ export class FixedArray<T, N extends number> extends Slice<T> {
       new_fixed[i] = f(this.buf[i], i);
     }
     return new_fixed;
+  }
+
+  public eq(other: Slice<T>): boolean;
+  public eq(other: T[]): boolean;
+  public eq(other: FixedArray<T, number>): boolean;
+  public eq(other: Vec<T>): boolean;
+  eq(other: any): boolean {
+    return super.eq(other);
+  }
+
+  public clone() {
+    const copy = new FixedArray<T, N>(undefined as T, this._len as N);
+    for (let i of range(0, this._len)) {
+      const item = this.buf[i];
+      copy[i] = clone_of(item);
+    }
+    return copy;
   }
 }
 

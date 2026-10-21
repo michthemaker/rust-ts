@@ -61,7 +61,7 @@ describe("Vec<T>", () => {
       // v undergoes a structural change here: the len changes
       v[3] = 44;
       // but view (slice) over it still shows the three elements, so it is invalidated
-      expect(inspect(view)).toBe("Slice[<invalidated>]");
+      expect(inspect(view)).toBe("&[<invalidated>]");
       expect(() => console.log(view[3])).toThrow(/slice invalidated:/i);
       expect(() => console.log(view.get(5))).toThrow(/slice invalidated:/i);
     });

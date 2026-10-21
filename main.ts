@@ -92,6 +92,8 @@ console.log(Option.Some("29").clone());
 console.log(is_eq(Result.Ok(d32("0")), Result.Err(d32("0"))));
 console.log(is_eq(Option.Some(d32("0")), Option.Some(d32("0"))));
 
+console.log(vec<number>().eq(new FixedArray(0, 0).clone().get(range(0, 0)).unwrap()), "je");
+
 console.log(is_eq(vec([0, 2]).get(range(0, 1)).unwrap(), vec([0])));
 
 console.log(is_eq(Tuple(0, d32("92")), Tuple()));

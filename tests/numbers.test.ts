@@ -343,14 +343,12 @@ describe("Sized numbers", () => {
         const [a, b, c] = Tuple(d32("1"), d64("1"), d128("1"));
         // @ts-expect-error
         expect(() => (a.kind = "d64")).toThrow();
-        // @ts-expect-erro        expect(() => (b.kind = "d32")).toThrow();
+        // @ts-expect-error
+        expect(() => (b.kind = "d32")).toThrow();
         // @ts-expect-error
         expect(() => (c.kind = "d32")).toThrow();
-        // @ts-expect-error
         expect(a.mantissa).toBe(undefined);
-        // @ts-expect-error
         expect(b.mantissa).toBe(undefined);
-        // @ts-expect-error
         expect(c.mantissa).toBe(undefined);
       });
     });

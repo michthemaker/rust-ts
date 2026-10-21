@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { Slice } from "../src/slice";
+import { Slice as SliceView } from "../src/slice";
 import { OnceLock } from "../src/sync/once_lock";
 import { inspect } from "node:util";
 import { FixedArray } from "../src/fixed_array";
 import { match, P } from "../src/match";
 import { vec, Vec } from "../src/vec";
 import { Result } from "../src/result";
+
+const Slice = SliceView as any;
 
 /** a Slice over `items`: window [start, start + len), sharing `items` as its buffer */
 function make<T>(items: T[], start = 0, len = items.length - start) {
@@ -139,7 +141,7 @@ describe("Slice<T>", () => {
 
   describe("windows and chunks sizes", () => {
     const items = () => make([1, 2, 3]);
-    const arrays = (it: IterableIterator<Slice<number>>) => [...it].map((s) => s.to_array());
+    const arrays = (it: IterableIterator<SliceView<number>>) => [...it].map((s) => s.to_array());
 
     test("size larger than len", () => {
       expect(arrays(items().windows(5))).to_equal([]);
@@ -410,7 +412,9 @@ describe("Slice<T>", () => {
         { k: 0, id: "d" },
       ];
       const s = make(items);
+      // @ts-expect-error
       s.sort_by((x, y) => x.k - y.k);
+      // @ts-expect-error
       expect(s.to_array().map((x) => x.id)).to_equal(["b", "d", "a", "c"]);
     });
 
@@ -434,7 +438,9 @@ describe("Slice<T>", () => {
         { k: 1, id: "d" },
       ];
       const s = make(items);
+      // @ts-expect-error
       s.sort_by_key((x) => x.k);
+      // @ts-expect-error
       expect(s.to_array().map((x) => x.id)).to_equal(["b", "d", "a", "c"]);
     });
   });
@@ -657,9 +663,9 @@ describe("Slice<T>", () => {
 
   describe("inspect output", () => {
     test("Slice uses the custom inspect symbol", () => {
-      expect(inspect(make([1, 2, 3]))).toBe("Slice[1, 2, 3]");
-      expect(inspect(make([0, 1, 2, 3, 4], 1, 3))).toBe("Slice[1, 2, 3]");
-      expect(inspect(make<number>([]))).toBe("Slice[]");
+      expect(inspect(make([1, 2, 3]))).toBe("&[1, 2, 3]");
+      expect(inspect(make([0, 1, 2, 3, 4], 1, 3))).toBe("&[1, 2, 3]");
+      expect(inspect(make<number>([]))).toBe("&[]");
     });
 
     test("FixedArray uses its own", () => {

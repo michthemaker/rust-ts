@@ -101,15 +101,6 @@ export class Vec<T> extends Slice<T> {
     return this.buf.slice(0, this._len) as T[];
   }
 
-  public override clone() {
-    const copy = Vec.with_capacity<T>(this._capacity);
-    for (let i of range(0, this._len)) {
-      const item = this.buf[i];
-      copy[i] = clone_of(item);
-    }
-    return copy;
-  }
-
   /**
    * @dev appends a value to the end of vector
    * if the capacity is equal to the length, doubles the capacity
@@ -498,6 +489,23 @@ export class Vec<T> extends Slice<T> {
       this._capacity = required_capacity;
       this.buf.length = this._capacity;
     }
+  }
+
+  public eq(other: Slice<T>): boolean;
+  public eq(other: T[]): boolean;
+  public eq(other: FixedArray<T, number>): boolean;
+  public eq(other: Vec<T>): boolean;
+  eq(other: any): boolean {
+    return super.eq(other);
+  }
+
+  public override clone() {
+    const copy = Vec.with_capacity<T>(this._capacity);
+    for (let i of range(0, this._len)) {
+      const item = this.buf[i];
+      copy[i] = clone_of(item);
+    }
+    return copy;
   }
 }
 
