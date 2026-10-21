@@ -1,4 +1,4 @@
-import { is_eq } from "./cmp/partial_eq";
+import { is_eq } from "./cmp";
 import { define_pattern, Pattern } from "./match";
 import { Option } from "./option";
 import { FixedArray as Impl } from "./fixed_array_impl";

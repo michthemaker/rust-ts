@@ -68,11 +68,11 @@ export type Trait<
   superTraits: ST;
 };
 
-/*  API: generate trait (regular variant)  */
+/** generate trait (regular variant)  */
 /* eslint no-redeclare: off */
 export function trait<T extends ConsFactory<AnyCons>>(factory: T): Trait<T, undefined>;
 
-/*  API: generate trait (super-trait variant)  */
+/** generate trait (super-trait variant)  */
 export function trait<
   const ST extends (Trait | TypeFactory<Trait>)[],
   T extends ConsFactory<
@@ -324,7 +324,7 @@ const deriveTrait = (
 const reverseTraitList = (traits: (Trait | TypeFactory<Trait>)[]) =>
   traits.slice().reverse() as (Trait | TypeFactory<Trait>)[];
 
-/*  API: type derive  */
+/** implement trait  */
 export function impl<
   T extends
     | [Trait | TypeFactory<Trait>, ...(Trait | TypeFactory<Trait>)[]]
@@ -383,7 +383,7 @@ export type TraitInstance<T extends Trait | TypeFactory<Trait>> =
       ? DerivedType<T>
       : never;
 
-/*  API: type guard for checking whether class instance implements a trait  */
+/** type guard for checking whether class instance implements a trait  */
 export function impls<T extends Trait | TypeFactory<Trait> | Cons>(
   instance: unknown,
   trait: T,

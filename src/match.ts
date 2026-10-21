@@ -1,4 +1,4 @@
-import { is_eq } from "./cmp/partial_eq";
+import { is_eq } from "./cmp";
 import { Option } from "./option";
 import { Result } from "./result";
 

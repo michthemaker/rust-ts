@@ -1,4 +1,4 @@
-import { clone_of } from "../lib/clone";
+import { clone_of } from "./clone";
 import { FMT } from "./fmt";
 import { range } from "./range";
 import { Slice } from "./slice";

@@ -1,6 +1,6 @@
 import { Option } from "./option";
 import { define_pattern, Pattern } from "./match";
-import { is_eq } from "./cmp/partial_eq";
+import { is_eq } from "./cmp";
 import { Vec as Impl } from "./vec_impl";
 
 // Numeric Indexable<T> interface

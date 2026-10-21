@@ -1,5 +1,4 @@
-import { is_eq } from "./cmp/partial_eq";
-import { clone_of } from "../lib/clone";
+import { is_eq } from "./cmp";
 import { Option } from "./option";
 import { range } from "./range";
 import { FixedArray } from "./fixed_array";
@@ -7,6 +6,7 @@ import { Result } from "./result";
 import { register_vec_factory, resolve_range, Slice } from "./slice";
 import { type Range } from "./range";
 import { FMT } from "./fmt";
+import { clone_of } from "./clone";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295; // 2^32 - 1
 
@@ -101,7 +101,7 @@ export class Vec<T> extends Slice<T> {
     return this.buf.slice(0, this._len) as T[];
   }
 
-  public clone() {
+  public override clone() {
     const copy = Vec.with_capacity<T>(this._capacity);
     for (let i of range(0, this._len)) {
       const item = this.buf[i];
@@ -263,6 +263,7 @@ export class Vec<T> extends Slice<T> {
   /** Every view made from this Vec stops working after a structural change to it. */
   protected override sub(from: number, to: number): Slice<T> {
     const seen = this._version;
+    // @ts-ignore
     return new Slice(this.buf, this.start + from, to - from, () => {
       if (this._version !== seen)
         throw new Error("slice invalidated: the Vec was modified after this view was created");

@@ -1,9 +1,16 @@
-import { is_eq } from "./src/cmp/partial_eq.ts";
+import { Clone } from "./src/clone.ts";
+import { is_eq, PartialEq } from "./src/cmp.ts";
 import { FixedArray } from "./src/fixed_array.ts";
+import { Debug } from "./src/fmt.ts";
 import "./src/globals.ts";
 import { match } from "./src/match.ts";
 import { Option } from "./src/option.ts";
+import { println } from "./src/println.ts";
+import { range } from "./src/range.ts";
 import { Result } from "./src/result.ts";
+import { OnceLock } from "./src/sync/once_lock.ts";
+import { impls } from "./src/trait.ts";
+import { Tuple } from "./src/tuple.ts";
 import { vec } from "./src/vec.ts";
 
 export function main() {
@@ -47,10 +54,44 @@ export function main() {
 
   console.log(is_eq(Result.Err("sl"), Result.Err("sl")));
   console.log(is_eq(Option.None(), Option.None()));
-}
 
-console.log(vec([0, 29, 290]));
+  console.log(vec([0, 29, 290]));
+  const value = new OnceLock<number>();
+  value.set(902);
+  const cloned = value.clone();
+  match(cloned.set(999), {
+    Ok() {
+      console.log("we hit this");
+    },
+    Err() {},
+  });
+  console.log(is_eq(value, cloned));
+
+  const dec = d32("0.2");
+  console.log(dec.clone().eq(dec));
+  new FixedArray(0, 5).clone();
+
+  const big = vec([19, 29, 39, 20, 10, 20]).get(range(2, 6)).unwrap();
+
+  console.log(big.clone());
+
+  console.log(impls(vec(), PartialEq));
+  console.log(impls(vec(), Debug));
+  console.log(impls(vec(), Clone));
+  console.log(vec([0, 290, 0o7272]).clone());
+}
+// @ts-expect-error
+println("name {:?}", d32("0.2"));
+
+console.log(Option.Some("29").clone());
 
 // solve this bug later
 // console.log(Tuple(0, Tuple(0)));
 // console.log(FixedArray.from_fn(5, () => Tuple(0, 0)));
+
+console.log(is_eq(Result.Ok(d32("0")), Result.Err(d32("0"))));
+console.log(is_eq(Option.Some(d32("0")), Option.Some(d32("0"))));
+
+console.log(is_eq(vec([0, 2]).get(range(0, 1)).unwrap(), vec([0])));
+
+console.log(is_eq(Tuple(0, d32("92")), Tuple()));

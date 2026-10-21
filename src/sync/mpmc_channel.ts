@@ -11,6 +11,9 @@ import { INTERNAL_SEMAPHORE_CONTROLLER, Semaphore } from "./semaphore.ts";
 import { SharedJsonBuffer } from "../threads/shared_json_buffer.ts";
 import { Option } from "../option.ts";
 import { match, P } from "../match.ts";
+import { impl } from "../trait.ts";
+import { Clone } from "../clone.ts";
+import { Debug, FMT } from "../fmt.ts";
 
 const IDX_HEAD = 0;
 const IDX_TAIL = 1;
@@ -112,8 +115,12 @@ class ChannelInternals<T> extends Serializable {
   }
 }
 
-abstract class ChannelHandle<T> extends Serializable implements Disposable {
+abstract class ChannelHandle<T> extends impl(Debug, Serializable) implements Disposable {
   protected disposed = false;
+
+  [FMT]() {
+    return this.constructor.name;
+  }
 
   constructor(protected internals: ChannelInternals<T>) {
     super();
@@ -135,7 +142,7 @@ abstract class ChannelHandle<T> extends Serializable implements Disposable {
   abstract [Symbol.dispose](): void;
 }
 
-export class Sender<T> extends ChannelHandle<T> {
+export class Sender<T> extends impl(Clone, ChannelHandle<any>) {
   static {
     register("rust-ts::sync::mpmc::Sender", this);
   }
@@ -144,7 +151,7 @@ export class Sender<T> extends ChannelHandle<T> {
     return ERR_DISPOSED_SENDER;
   }
 
-  clone(): Sender<T> {
+  clone() {
     if (this.disposed) throw new Error("Cannot clone disposed Sender");
     Atomics.add(this.internals.state, IDX_TX_COUNT, 1);
     return new Sender(this.internals);
@@ -261,7 +268,7 @@ export class Sender<T> extends ChannelHandle<T> {
   }
 }
 
-export class Receiver<T> extends ChannelHandle<T> {
+export class Receiver<T> extends impl(Clone, ChannelHandle<any>) {
   static {
     register("rust-ts::sync::mpmc::Receiver", this);
   }
@@ -270,7 +277,7 @@ export class Receiver<T> extends ChannelHandle<T> {
     return ERR_DISPOSED_RECEIVER;
   }
 
-  clone(): Receiver<T> {
+  clone() {
     if (this.disposed) throw new Error("Cannot clone disposed Receiver");
     Atomics.add(this.internals.state, IDX_RX_COUNT, 1);
     return new Receiver(this.internals);

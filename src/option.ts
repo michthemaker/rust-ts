@@ -1,11 +1,13 @@
-import { is_eq, PartialEq } from "./cmp/partial_eq";
+import { Clone, clone_of } from "./clone";
+import { is_eq, PartialEq } from "./cmp";
 import { Debug, FMT } from "./fmt";
 import { Result } from "./result";
 import { impl, TraitInstance } from "./trait";
 
 export const HIDDEN_OPTION_TAG = "rust-ts::std::Option<T>";
 
-interface OptionMethods<T> extends TraitInstance<typeof PartialEq<Option<T>>> {
+interface OptionMethods<T>
+  extends TraitInstance<typeof PartialEq<Option<T>>>, TraitInstance<typeof Clone<Option<T>>> {
   is_some(): this is Some<T>;
   is_none(): this is None;
   unwrap(): T;
@@ -28,7 +30,7 @@ export interface None<T = unknown> extends OptionMethods<T> {}
 
 export type Option<T> = Some<T> | None<T>;
 
-class OptionImpl<T> extends impl(PartialEq<any>, Debug) implements OptionMethods<T> {
+class OptionImpl<T> extends impl(PartialEq<any>, Debug, Clone) implements OptionMethods<T> {
   private some: boolean;
   private value: T | undefined;
   [HIDDEN_OPTION_TAG] = true;
@@ -86,6 +88,9 @@ class OptionImpl<T> extends impl(PartialEq<any>, Debug) implements OptionMethods
   }
   ne(other: unknown): boolean {
     return !this.eq(other);
+  }
+  clone() {
+    return create_frozen_option({ some: this.some, value: clone_of(this.value) }) as Option<T>;
   }
 }
 

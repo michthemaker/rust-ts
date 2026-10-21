@@ -1,18 +1,19 @@
-import { is_eq, PartialEq } from "../cmp/partial_eq.ts";
+import { Clone, clone_of } from "../clone.ts";
+import { is_eq, PartialEq } from "../cmp.ts";
 import { Debug, FMT, FmtOptions } from "../fmt.ts";
 import { Result } from "../result.ts";
 import { impl } from "../trait.ts";
 
-class OnceLock<T> extends impl(PartialEq, Debug) {
+class OnceLock<T> extends impl(PartialEq, Debug, Clone) {
   #value: T | null = null;
-  #is_locked: boolean = false;
+  #locked: boolean = false;
 
   [FMT](
     _depth: number,
     options: FmtOptions,
     inspect: (arg: any, options: FmtOptions) => string,
   ): string {
-    return `OnceLock(${!this.#is_locked ? "Uninitialized" : inspect(this.#value, options)})`;
+    return `OnceLock(${!this.#locked ? "Uninitialized" : inspect(this.#value, options)})`;
   }
 
   get() {
@@ -20,10 +21,10 @@ class OnceLock<T> extends impl(PartialEq, Debug) {
   }
 
   set(initial: T): Result<null, string> {
-    if (this.#is_locked) return Result.Err("This OnceLock has already been initiliazed.");
+    if (this.#locked) return Result.Err("This OnceLock has already been initiliazed.");
     else {
       this.#value = initial;
-      this.#is_locked = true;
+      this.#locked = true;
       return Result.Ok(null);
     }
   }
@@ -36,6 +37,13 @@ class OnceLock<T> extends impl(PartialEq, Debug) {
 
   ne(other: OnceLock<T>): boolean {
     return !this.eq(other);
+  }
+
+  clone(): OnceLock<T> {
+    const once_lock = new OnceLock<T>();
+    once_lock.#locked = this.#locked;
+    if (this.#locked === true) once_lock.#value = clone_of(this.#value);
+    return once_lock;
   }
 }
 

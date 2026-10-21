@@ -11,6 +11,9 @@ import { INTERNAL_SEMAPHORE_CONTROLLER, Semaphore } from "./semaphore.ts";
 import { SharedJsonBuffer } from "../threads/shared_json_buffer.ts";
 import { Option } from "../option.ts";
 import { match, P } from "../match.ts";
+import { impl } from "../trait.ts";
+import { Clone } from "../clone.ts";
+import { Debug, FMT } from "../fmt.ts";
 
 const IDX_HEAD = 0;
 const IDX_TAIL = 1;
@@ -117,7 +120,7 @@ class ChannelInternals<T> extends Serializable {
   }
 }
 
-abstract class ChannelHandle<T> extends Serializable implements Disposable {
+abstract class ChannelHandle<T> extends impl(Debug, Serializable) implements Disposable {
   protected disposed = false;
 
   constructor(protected internals: ChannelInternals<T>) {
@@ -130,6 +133,10 @@ abstract class ChannelHandle<T> extends Serializable implements Disposable {
     return this.disposed ? Result.Err(this.disposeError) : Result.Ok(undefined);
   }
 
+  [FMT]() {
+    return this.constructor.name;
+  }
+
   [to_serialized]() {
     if (this.disposed) throw new Error("Cannot move a disposed Handle");
     this.disposed = true; // Ownership transfer
@@ -140,7 +147,7 @@ abstract class ChannelHandle<T> extends Serializable implements Disposable {
   abstract [Symbol.dispose](): void;
 }
 
-export class Sender<T> extends ChannelHandle<T> {
+export class Sender<T> extends impl(Clone, ChannelHandle<any>) {
   static {
     register("rust-ts::sync::mpsc::Sender", this);
   }
@@ -149,7 +156,7 @@ export class Sender<T> extends ChannelHandle<T> {
     return ERR_DISPOSED_SENDER;
   }
 
-  clone(): Sender<T> {
+  clone() {
     if (this.disposed) throw new Error("Cannot clone disposed Sender");
     Atomics.add(this.internals.state, IDX_TX_COUNT, 1);
     return new Sender(this.internals);

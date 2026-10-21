@@ -1,11 +1,13 @@
-import { is_eq, PartialEq } from "./cmp/partial_eq";
+import { Clone, clone_of } from "./clone";
+import { is_eq, PartialEq } from "./cmp";
 import { Debug, FMT } from "./fmt";
 import { Option } from "./option";
 import { impl, TraitInstance } from "./trait";
 
 export const HIDDEN_RESULT_TAG = "rust-ts::std::Result<T, E>";
 
-interface ResultMethods<T, E> extends TraitInstance<typeof PartialEq<Result<T, E>>> {
+interface ResultMethods<T, E>
+  extends TraitInstance<typeof PartialEq<Result<T, E>>>, TraitInstance<typeof Clone<Result<T, E>>> {
   is_ok(): this is Ok<T, E>;
   is_err(): this is Err<T, E>;
   unwrap(): T;
@@ -33,7 +35,7 @@ export interface Err<T, E> extends ResultMethods<T, E> {}
 
 export type Result<T, E> = Ok<T, E> | Err<T, E>;
 
-class ResultImpl<T, E> extends impl(PartialEq<any>, Debug) implements ResultMethods<T, E> {
+class ResultImpl<T, E> extends impl(PartialEq<any>, Debug, Clone) implements ResultMethods<T, E> {
   // we will leave these as private so that equality checkers can work
   private result_ok: boolean;
   private value: T | undefined;
@@ -101,9 +103,18 @@ class ResultImpl<T, E> extends impl(PartialEq<any>, Debug) implements ResultMeth
   ne(other: unknown): boolean {
     return !this.eq(other);
   }
+  clone() {
+    const this_value = this;
+    return create_frozen_result({
+      ok: this_value.result_ok,
+      ...(this_value.result_ok
+        ? { value: clone_of(this_value.value) }
+        : { error: clone_of(this_value.error) }),
+    }) as Result<T, E>;
+  }
 }
 
-function createFrozenResult<T, E>(raw: any): Result<T, E> {
+function create_frozen_result<T, E>(raw: any): Result<T, E> {
   const result_obj = new ResultImpl<T, E>(
     raw.ok,
     raw.ok ? raw.value : raw.error,
@@ -114,13 +125,13 @@ function createFrozenResult<T, E>(raw: any): Result<T, E> {
 
 export const Result = {
   Ok<T = any, E = any>(value: T): Result<T, E> {
-    return createFrozenResult({ ok: true, value });
+    return create_frozen_result({ ok: true, value });
   },
   Err<T = any, E = any>(error: E): Result<T, E> {
-    return createFrozenResult({ ok: false, error });
+    return create_frozen_result({ ok: false, error });
   },
   from<T, E>(value: Result<T, E>) {
-    return createFrozenResult(value);
+    return create_frozen_result(value);
   },
   is_result(value: unknown): value is Result<unknown, unknown> {
     return typeof value === "object" && value !== null && HIDDEN_RESULT_TAG in value;

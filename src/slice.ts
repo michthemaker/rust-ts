@@ -1,11 +1,11 @@
-import { is_eq, PartialEq } from "./cmp/partial_eq";
-import { clone_of } from "../lib/clone";
+import { is_eq, PartialEq } from "./cmp";
 import { Option } from "./option";
 import { Result } from "./result";
 import type { Vec } from "./vec_impl";
 import { Range } from "./range";
 import { impl } from "./trait";
 import { Debug, FMT } from "./fmt";
+import { Clone, clone_of } from "./clone";
 
 const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 const INDEX = /^(0|[1-9]\d*)$/;
@@ -59,7 +59,7 @@ function as_array<T>(src: Source<T>): readonly T[] {
  * Never copies on construction. Sub-slices share `buf`, so mutation through
  * one view is visible in the owner (and in every overlapping view).
  */
-export class Slice<T> extends impl(PartialEq<Source<any>>, Debug) {
+export abstract class Slice<T> extends impl(PartialEq<Source<any>>, Debug, Clone) {
   protected buf: T[];
   protected start: number;
   protected _len: number;
@@ -70,10 +70,10 @@ export class Slice<T> extends impl(PartialEq<Source<any>>, Debug) {
     try {
       this.guard?.();
     } catch {
-      return "Slice[<invalidated>]";
+      return "&[<invalidated>]";
     }
     const items = this.to_array().map((item) => inspect(item, options));
-    return `Slice[${items.join(", ")}]`;
+    return `&[${items.join(", ")}]`;
   }
 
   constructor(buf: T[], start: number, len: number, guard?: () => void) {
@@ -113,6 +113,7 @@ export class Slice<T> extends impl(PartialEq<Source<any>>, Debug) {
 
   /** a new view over the same buffer: [from, to) relative to this slice */
   protected sub(from: number, to: number): Slice<T> {
+    // @ts-ignore
     return new Slice(this.buf, this.start + from, to - from, this.guard);
   }
 
@@ -428,6 +429,10 @@ export class Slice<T> extends impl(PartialEq<Source<any>>, Debug) {
 
   public ne(other: Source<T>): boolean {
     return !this.eq(other);
+  }
+
+  public clone(): Slice<T> {
+    return this.sub(0, this._len);
   }
 }
 

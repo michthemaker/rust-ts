@@ -1,9 +1,10 @@
 import { Prettify } from "../lib/types";
-import { PartialEq } from "./cmp/partial_eq";
+import { Clone } from "./clone";
+import { PartialEq } from "./cmp";
 import { Debug, FMT } from "./fmt";
 import { match } from "./match";
 import { Result } from "./result";
-import { impl } from "./trait";
+import { impl, TraitInstance } from "./trait";
 
 export type Int<K extends string> = number & { readonly __num?: K };
 export type UInt<K extends string> = number & { readonly __num?: K };
@@ -447,7 +448,7 @@ export interface Decimal<
   K extends DecimalKind = DecimalKind,
   S extends number = number,
   P extends number = number,
-> {
+> extends TraitInstance<typeof Clone<DecimalOf<K, S, P>>> {
   readonly kind: K;
   /** type-only: the significant digits when known. It does not exist at runtime. */
   readonly digits?: P;
@@ -506,6 +507,7 @@ export interface Decimal<
   eq<T extends number>(other: DecimalOf<K, T>): boolean;
   /** true if this equals an integer. Floats are not accepted. */
   eq<const N extends IntLike>(other: IntArg<N>): boolean;
+  ne(other: unknown): boolean;
 }
 
 /**
@@ -768,7 +770,7 @@ type Operand = { readonly mantissa: bigint; readonly scale: number };
 // The method signatures are on the Decimal interface (they are too generic for the class
 // to implement), so the class only promises the plain members. `make` does the cast.
 class DecimalImpl<K extends DecimalKind, S extends number>
-  extends impl(PartialEq<any>, Debug)
+  extends impl(PartialEq<any>, Debug, Clone)
   implements Pick<Decimal<K, S>, "kind" | "scale" | "to_string" | "toJSON">
 {
   /** the digits as a signed whole number: "-1.50" has mantissa -150n */
@@ -911,6 +913,10 @@ class DecimalImpl<K extends DecimalKind, S extends number>
 
   ne(other: unknown): boolean {
     return !this.eq(other);
+  }
+
+  clone() {
+    return new DecimalImpl(this.kind, this.#mantissa, this.scale);
   }
 
   // Only the "string" hint (template literals, String(x)) works. Everything else

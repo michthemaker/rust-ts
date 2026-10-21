@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import { is_eq } from "../src/cmp/partial_eq.ts";
+import { is_eq } from "../src/cmp.ts";
 
 expect.extend({
   to_equal(received, expected) {
