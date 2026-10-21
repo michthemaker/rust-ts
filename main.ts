@@ -1,5 +1,6 @@
 import { Clone } from "./src/clone.ts";
 import { is_eq, PartialEq } from "./src/cmp.ts";
+import { Default } from "./src/default.ts";
 import { FixedArray } from "./src/fixed_array.ts";
 import { Debug } from "./src/fmt.ts";
 import "./src/globals.ts";
@@ -97,3 +98,11 @@ console.log(vec<number>().eq(new FixedArray(0, 0).clone().get(range(0, 0)).unwra
 console.log(is_eq(vec([0, 2]).get(range(0, 1)).unwrap(), vec([0])));
 
 console.log(is_eq(Tuple(0, d32("92")), Tuple()));
+
+const mine_3 = OnceLock.default<d32>();
+
+console.log(mine_3);
+
+const mine_4 = Default.default(OnceLock<number>);
+
+console.log(mine_4);

@@ -1,10 +1,11 @@
 import { Clone, clone_of } from "../clone.ts";
 import { is_eq, PartialEq } from "../cmp.ts";
+import { Default } from "../default.ts";
 import { Debug, FMT, FmtOptions } from "../fmt.ts";
 import { Result } from "../result.ts";
 import { impl } from "../trait.ts";
 
-class OnceLock<T> extends impl(PartialEq, Debug, Clone) {
+class OnceLock<T> extends impl(PartialEq, Default, Debug, Clone) {
   #value: T | null = null;
   #locked: boolean = false;
 
@@ -44,6 +45,10 @@ class OnceLock<T> extends impl(PartialEq, Debug, Clone) {
     once_lock.#locked = this.#locked;
     if (this.#locked === true) once_lock.#value = clone_of(this.#value);
     return once_lock;
+  }
+
+  static default<T>() {
+    return new OnceLock<T>();
   }
 }
 

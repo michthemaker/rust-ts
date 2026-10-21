@@ -23,9 +23,9 @@ const crc32 = (str: string) => {
 };
 
 /*  utility type and function: constructor (function)  */
-type Cons<T extends any = any> = new (...args: any[]) => T;
-type AbstractCons<T extends any = any> = abstract new (...args: any[]) => T;
-type AnyCons<T extends any = any> = Cons<T> | AbstractCons<T>;
+export type Cons<T extends any = any> = new (...args: any[]) => T;
+export type AbstractCons<T extends any = any> = abstract new (...args: any[]) => T;
+export type AnyCons<T extends any = any> = Cons<T> | AbstractCons<T>;
 const isCons = <T extends any = any>(fn: unknown): fn is Cons<T> =>
   typeof fn === "function" && !!fn.prototype && !!fn.prototype.constructor;
 
@@ -56,55 +56,48 @@ type MixParams<T1 extends any[], T2 extends any[]> = T1 extends []
 /*  ==== TRAIT DEFINITION ====  */
 
 /*  API: trait type  */
-type TraitDefTypeT = ConsFactory<AnyCons>;
-type TraitDefTypeST = (Trait | TypeFactory<Trait>)[] | undefined;
-export type Trait<
-  T extends TraitDefTypeT = TraitDefTypeT,
-  ST extends TraitDefTypeST = TraitDefTypeST,
-> = {
+type TraitDefTypeST = (SubTrait | TypeFactory<SubTrait>)[] | undefined;
+
+export interface Trait<T extends AnyCons<any> = AnyCons<any>> {
   id: number /* unique id (primary,   for hasTrait)      */;
   symbol: symbol /* unique id (secondary, currently unused)  */;
-  factory: T;
+	factory: (b: any) => T;
+	superTraits: undefined;
+}
+export interface SubTrait<
+  T extends AnyCons<any> = AnyCons<any>,
+  ST extends TraitDefTypeST = TraitDefTypeST,
+> {
+  id: number /* unique id (primary,   for hasTrait)      */;
+  symbol: symbol /* unique id (secondary, currently unused)  */;
+  factory: (b: any) => T;
   superTraits: ST;
-};
+}
 
 /** generate trait (regular variant)  */
 /* eslint no-redeclare: off */
-export function trait<T extends ConsFactory<AnyCons>>(factory: T): Trait<T, undefined>;
+export function trait<T extends ConsFactory<AnyCons>>(factory: T): Trait<ReturnType<T>>;
 
 /** generate trait (super-trait variant)  */
 export function trait<
-  const ST extends (Trait | TypeFactory<Trait>)[],
+  const ST extends (SubTrait | TypeFactory<SubTrait>)[],
   T extends ConsFactory<
     AnyCons,
     // @ts-ignore
     ST extends [infer First, ...infer Rest]
-      ? First extends TypeFactory<Trait>
+      ? First extends TypeFactory<SubTrait>
         ? ExtractFactory<ReturnType<First>>
-        : First extends Trait
+        : First extends SubTrait
           ? ExtractFactory<First>
           : any
       : any
   >,
->(superTraits: ST, factory: T): Trait<T, ST>;
+>(superTraits: ST, factory: T): SubTrait<ReturnType<T>, ST>;
 
 /*  API: generate trait (technical implementation)  */
-export function trait<
-  const ST extends (Trait | TypeFactory<Trait>)[],
-  T extends ConsFactory<
-    AnyCons,
-    // @ts-ignore
-    ST extends [infer First, ...infer Rest]
-      ? First extends TypeFactory<Trait>
-        ? ExtractFactory<ReturnType<First>>
-        : First extends Trait
-          ? ExtractFactory<First>
-          : any
-      : any
-  >,
->(...args: any[]): Trait<T, ST> {
-  const factory: T = args.length === 2 ? args[1] : args[0];
-  const superTraits: ST = args.length === 2 ? args[0] : undefined;
+export function trait(...args: any[]): SubTrait<any, any> {
+  const factory = args.length === 2 ? args[1] : args[0];
+  const superTraits = args.length === 2 ? args[0] : undefined;
   return {
     id: crc32(factory.toString()),
     symbol: Symbol("trait"),
@@ -118,12 +111,11 @@ export function trait<
 /*  ---- TRAIT PART EXTRACTION ----  */
 
 /*  utility types: extract factory from a trait  */
-type ExtractFactory<T extends Trait> =
-  T extends Trait<ConsFactory<infer C>, TraitDefTypeST> ? C : never;
+type ExtractFactory<T extends SubTrait> = T extends SubTrait<infer C, TraitDefTypeST> ? C : never;
 
 /*  utility types: extract supertraits from a trait  */
-type ExtractSuperTrait<T extends Trait> =
-  T extends Trait<TraitDefTypeT, infer ST extends TraitDefTypeST> ? ST : never;
+type ExtractSuperTrait<T extends SubTrait> =
+  T extends SubTrait<AnyCons<any>, infer ST extends TraitDefTypeST> ? ST : never;
 
 /*  ---- TRAIT CONSTRUCTOR DERIVATION ----  */
 
@@ -162,7 +154,7 @@ type DeriveTraitsConsCons<T extends AnyCons> = ConsOf<
 /*  utility type: derive type constructor: from trait parts  */
 type DeriveTraitsConsTraitParts<
   C extends AnyCons,
-  ST extends (Trait | TypeFactory<Trait>)[] | undefined,
+  ST extends (SubTrait | TypeFactory<SubTrait>)[] | undefined,
 > = ST extends undefined
   ? DeriveTraitsConsCons<C>
   : ST extends []
@@ -170,34 +162,37 @@ type DeriveTraitsConsTraitParts<
     : DeriveTraitsConsConsMerge<DeriveTraitsConsCons<C>, DeriveTraitsConsAll<ST>>; /* RECURSION */
 
 /*  utility type: derive type constructor: from single trait  */
-type DeriveTraitsConsTrait<T extends Trait> = DeriveTraitsConsTraitParts<
+type DeriveTraitsConsTrait<T extends SubTrait> = DeriveTraitsConsTraitParts<
   ExtractFactory<T>,
   ExtractSuperTrait<T>
 >;
 
 /*  utility type: derive type constructor: from single trait or trait factory  */
-type DeriveTraitsConsOne<T extends Trait | TypeFactory<Trait>> = T extends Trait
+type DeriveTraitsConsOne<T extends SubTrait | TypeFactory<SubTrait>> = T extends SubTrait
   ? DeriveTraitsConsTrait<T>
-  : T extends TypeFactory<Trait>
+  : T extends TypeFactory<SubTrait>
     ? DeriveTraitsConsTrait<ReturnType<T>>
     : never;
 
 /*  utility type: derive type constructor: from one or more traits or trait factories  */
 type DeriveTraitsConsAll<
   T extends
-    | ((Trait | TypeFactory<Trait>)[] | [...(Trait | TypeFactory<Trait>)[], AnyCons])
+    | ((SubTrait | TypeFactory<SubTrait>)[] | [...(SubTrait | TypeFactory<SubTrait>)[], AnyCons])
     | undefined,
-> = T extends [...infer Others extends (Trait | TypeFactory<Trait>)[], infer Last extends AnyCons]
+> = T extends [
+  ...infer Others extends (SubTrait | TypeFactory<SubTrait>)[],
+  infer Last extends AnyCons,
+]
   ? DeriveTraitsConsConsMerge<
       DeriveTraitsConsAll<Others> /* RECURSION */,
       DeriveTraitsConsCons<Last>
     >
-  : T extends (Trait | TypeFactory<Trait>)[]
-    ? T extends [infer First extends Trait | TypeFactory<Trait>]
+  : T extends (SubTrait | TypeFactory<SubTrait>)[]
+    ? T extends [infer First extends SubTrait | TypeFactory<SubTrait>]
       ? DeriveTraitsConsOne<First>
       : T extends [
-            infer First extends Trait | TypeFactory<Trait>,
-            ...infer Rest extends (Trait | TypeFactory<Trait>)[],
+            infer First extends SubTrait | TypeFactory<SubTrait>,
+            ...infer Rest extends (SubTrait | TypeFactory<SubTrait>)[],
           ]
         ? DeriveTraitsConsConsMerge<
             DeriveTraitsConsOne<First>,
@@ -208,7 +203,9 @@ type DeriveTraitsConsAll<
 
 /*  utility type: derive type constructor  */
 type DeriveTraitsCons<
-  T extends (Trait | TypeFactory<Trait>)[] | [...(Trait | TypeFactory<Trait>)[], AnyCons],
+  T extends
+    | (SubTrait | TypeFactory<SubTrait>)[]
+    | [...(SubTrait | TypeFactory<SubTrait>)[], AnyCons],
 > = DeriveTraitsConsAll<T>;
 
 /*  ---- TRAIT STATICS DERIVATION ----  */
@@ -222,7 +219,7 @@ type DeriveTraitsStatsCons<T extends AnyCons> = Explode<T>;
 /*  utility type: derive type statics: from trait parts  */
 type DeriveTraitsStatsTraitParts<
   C extends AnyCons,
-  ST extends (Trait | TypeFactory<Trait>)[] | undefined,
+  ST extends (SubTrait | TypeFactory<SubTrait>)[] | undefined,
 > = ST extends undefined
   ? DeriveTraitsStatsCons<C>
   : ST extends []
@@ -233,34 +230,37 @@ type DeriveTraitsStatsTraitParts<
       >; /* RECURSION */
 
 /*  utility type: derive type statics: from single trait  */
-type DeriveTraitsStatsTrait<T extends Trait> = DeriveTraitsStatsTraitParts<
+type DeriveTraitsStatsTrait<T extends SubTrait> = DeriveTraitsStatsTraitParts<
   ExtractFactory<T>,
   ExtractSuperTrait<T>
 >;
 
 /*  utility type: derive type statics: from single trait or trait factory  */
-type DeriveTraitsStatsOne<T extends Trait | TypeFactory<Trait>> = T extends Trait
+type DeriveTraitsStatsOne<T extends SubTrait | TypeFactory<SubTrait>> = T extends SubTrait
   ? DeriveTraitsStatsTrait<T>
-  : T extends TypeFactory<Trait>
+  : T extends TypeFactory<SubTrait>
     ? DeriveTraitsStatsTrait<ReturnType<T>>
     : never;
 
 /*  utility type: derive type statics: from one or more traits or trait factories  */
 type DeriveTraitsStatsAll<
   T extends
-    | ((Trait | TypeFactory<Trait>)[] | [...(Trait | TypeFactory<Trait>)[], AnyCons])
+    | ((SubTrait | TypeFactory<SubTrait>)[] | [...(SubTrait | TypeFactory<SubTrait>)[], AnyCons])
     | undefined,
-> = T extends [...infer Others extends (Trait | TypeFactory<Trait>)[], infer Last extends AnyCons]
+> = T extends [
+  ...infer Others extends (SubTrait | TypeFactory<SubTrait>)[],
+  infer Last extends AnyCons,
+]
   ? DeriveTraitsStatsConsMerge<
       DeriveTraitsStatsAll<Others> /* RECURSION */,
       DeriveTraitsStatsCons<Last>
     >
-  : T extends (Trait | TypeFactory<Trait>)[]
-    ? T extends [infer First extends Trait | TypeFactory<Trait>]
+  : T extends (SubTrait | TypeFactory<SubTrait>)[]
+    ? T extends [infer First extends SubTrait | TypeFactory<SubTrait>]
       ? DeriveTraitsStatsOne<First>
       : T extends [
-            infer First extends Trait | TypeFactory<Trait>,
-            ...infer Rest extends (Trait | TypeFactory<Trait>)[],
+            infer First extends SubTrait | TypeFactory<SubTrait>,
+            ...infer Rest extends (SubTrait | TypeFactory<SubTrait>)[],
           ]
         ? DeriveTraitsStatsConsMerge<
             DeriveTraitsStatsOne<First>,
@@ -271,14 +271,18 @@ type DeriveTraitsStatsAll<
 
 /*  utility type: derive type statics  */
 type DeriveTraitsStats<
-  T extends (Trait | TypeFactory<Trait>)[] | [...(Trait | TypeFactory<Trait>)[], AnyCons],
+  T extends
+    | (SubTrait | TypeFactory<SubTrait>)[]
+    | [...(SubTrait | TypeFactory<SubTrait>)[], AnyCons],
 > = DeriveTraitsStatsAll<T>;
 
 /*  ---- TRAIT DERIVATION ----  */
 
 /*  utility type: derive type from one or more traits or trait type factories  */
 type DeriveTraits<
-  T extends (Trait | TypeFactory<Trait>)[] | [...(Trait | TypeFactory<Trait>)[], AnyCons],
+  T extends
+    | (SubTrait | TypeFactory<SubTrait>)[]
+    | [...(SubTrait | TypeFactory<SubTrait>)[], AnyCons],
 > = DeriveTraitsCons<T> & DeriveTraitsStats<T>;
 
 /*  ---- TRAIT DERIVATION RUNTIME ----  */
@@ -288,11 +292,11 @@ const extendProperties = (cons: AnyCons, field: string | symbol, value: any) =>
   Object.defineProperty(cons, field, { value, enumerable: false, writable: false });
 
 /*  utility function: get raw trait  */
-const rawTrait = (x: Trait | TypeFactory<Trait>) => (isTypeFactory(x) ? x() : x);
+const rawTrait = (x: SubTrait | TypeFactory<SubTrait>) => (isTypeFactory(x) ? x() : x);
 
 /*  utility function: derive a trait  */
 const deriveTrait = (
-  trait$: Trait | TypeFactory<Trait>,
+  trait$: SubTrait | TypeFactory<SubTrait>,
   baseClz: AnyCons<any>,
   derived: Map<number, boolean>,
 ) => {
@@ -321,14 +325,14 @@ const deriveTrait = (
 };
 
 /*  utility function: get reversed trait list  */
-const reverseTraitList = (traits: (Trait | TypeFactory<Trait>)[]) =>
-  traits.slice().reverse() as (Trait | TypeFactory<Trait>)[];
+const reverseTraitList = (traits: (SubTrait | TypeFactory<SubTrait>)[]) =>
+  traits.slice().reverse() as (SubTrait | TypeFactory<SubTrait>)[];
 
 /** implement trait  */
 export function impl<
   T extends
-    | [Trait | TypeFactory<Trait>, ...(Trait | TypeFactory<Trait>)[]]
-    | [...(Trait | TypeFactory<Trait>)[], AnyCons],
+    | [SubTrait | TypeFactory<SubTrait>, ...(SubTrait | TypeFactory<SubTrait>)[]]
+    | [...(SubTrait | TypeFactory<SubTrait>)[], AnyCons],
 >(...traits: T): DeriveTraits<T> {
   /*  run-time sanity check  */
   if (traits.length === 0)
@@ -336,16 +340,16 @@ export function impl<
 
   /*  determine the base class (clz) and the list of traits (lot)  */
   let clz: AnyCons<any>;
-  let lot: (Trait | TypeFactory<Trait>)[];
+  let lot: (SubTrait | TypeFactory<SubTrait>)[];
   const last = traits[traits.length - 1];
   if (isCons(last) && !isTypeFactory(last)) {
     /*  case 1: with trailing regular class  */
     clz = last;
-    lot = traits.slice(0, -1) as (Trait | TypeFactory<Trait>)[];
+    lot = traits.slice(0, -1) as (SubTrait | TypeFactory<SubTrait>)[];
   } else {
     /*  case 2: just regular traits or trait type factories  */
     clz = class ROOT {};
-    lot = traits as (Trait | TypeFactory<Trait>)[];
+    lot = traits as (SubTrait | TypeFactory<SubTrait>)[];
   }
 
   /*  track already derived traits  */
@@ -360,13 +364,13 @@ export function impl<
 /*  ==== TRAIT TYPE-GUARDING ====  */
 
 /*  internal type: implements trait type  */
-type DerivedType<T extends Trait> = InstanceType<ExtractFactory<T>>;
+type DerivedType<T extends SubTrait> = InstanceType<ExtractFactory<T>>;
 
 /*  internal type: implements trait type or trait type factory  */
-type Derived<T extends Trait | TypeFactory<Trait> | Cons> =
-  T extends TypeFactory<Trait>
+type Derived<T extends SubTrait | TypeFactory<SubTrait> | Cons> =
+  T extends TypeFactory<SubTrait>
     ? DerivedType<ReturnType<T>>
-    : T extends Trait
+    : T extends SubTrait
       ? DerivedType<T>
       : T extends Cons
         ? T
@@ -376,15 +380,15 @@ type Derived<T extends Trait | TypeFactory<Trait> | Cons> =
  * TraitInstance<typeof PartialEq<T>>
  *
  */
-export type TraitInstance<T extends Trait | TypeFactory<Trait>> =
-  T extends TypeFactory<Trait>
+export type TraitInstance<T extends SubTrait | TypeFactory<SubTrait>> =
+  T extends TypeFactory<SubTrait>
     ? DerivedType<ReturnType<T>>
-    : T extends Trait
+    : T extends SubTrait
       ? DerivedType<T>
       : never;
 
 /** type guard for checking whether class instance implements a trait  */
-export function impls<T extends Trait | TypeFactory<Trait> | Cons>(
+export function impls<T extends SubTrait | TypeFactory<SubTrait> | Cons>(
   instance: unknown,
   trait: T,
 ): instance is Derived<T> {
@@ -396,7 +400,7 @@ export function impls<T extends Trait | TypeFactory<Trait> | Cons>(
   if (isCons(trait) && !isTypeFactory(trait)) return instance instanceof trait;
 
   /*  regular case: trait or trait type factory...  */
-  const t = (isTypeFactory(trait) ? trait() : trait) as Trait;
+  const t = (isTypeFactory(trait) ? trait() : trait) as SubTrait;
   const idTrait = t["id"];
   while (obj) {
     if (Object.hasOwn(obj, "constructor")) {
