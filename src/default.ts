@@ -1,5 +1,5 @@
 import { is_sub_class_of } from "../lib/is_sub_class";
-import { Trait as TTrait, trait } from "./trait";
+import { LooseInstanceType, Trait as TTrait, trait } from "./trait";
 
 const __first_half = (() => {
   // @ts-expect-error
@@ -9,6 +9,8 @@ const __first_half = (() => {
         `required static default method not implemented on ${this.name} that implements Default trait`,
       );
     }
+    // @ts-expect-error
+    protected constructor(...args: any[]) {}
   }
   return Default;
 })();
@@ -29,14 +31,14 @@ export const Default = (() => {
   const Default = __first_half;
 
   interface Trait<T extends typeof Default> extends TTrait<T> {
-    default<T extends typeof Default>(type: T): InstanceType<T>;
+    default<T extends typeof Default>(type: T): LooseInstanceType<T>;
   }
 
   const __Default = Object.assign(
     trait(() => Default),
     {
       default<T extends typeof Default>(type: T) {
-        if (is_sub_class_of(type, Default)) return type.default() as InstanceType<T>;
+        if (is_sub_class_of(type, Default)) return type.default() as LooseInstanceType<T>;
         else throw new Error(`the trait bound ${type.name}: Default is not satisfied`);
       },
     },

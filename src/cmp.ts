@@ -5,6 +5,10 @@ export const PartialEq = <T>() =>
     abstract class PartialEq extends b {
       abstract eq(other: T): boolean;
       abstract ne(other: T): boolean;
+      // @ts-ignore
+      protected constructor(...args: any[]) {
+        super();
+      }
     }
     return PartialEq;
   });

@@ -147,9 +147,16 @@ abstract class ChannelHandle<T> extends impl(Debug, Serializable) implements Dis
   abstract [Symbol.dispose](): void;
 }
 
-export class Sender<T> extends impl(Clone, ChannelHandle<any>) {
+// @ts-ignore
+abstract class SenderChannelHandle<T> extends impl(Clone, ChannelHandle<any>) {}
+
+export class Sender<T> extends SenderChannelHandle<T> {
   static {
     register("rust-ts::sync::mpsc::Sender", this);
+  }
+
+  constructor(protected internals: ChannelInternals<T>) {
+    super();
   }
 
   protected get disposeError() {
@@ -269,6 +276,10 @@ export class Receiver<T> extends ChannelHandle<T> {
 
   protected get disposeError() {
     return ERR_DISPOSED_RECEIVER;
+  }
+
+  constructor(protected internals: ChannelInternals<T>) {
+    super(internals);
   }
 
   async recv(): Promise<Result<T, Error>> {

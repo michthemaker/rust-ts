@@ -25,7 +25,16 @@ const crc32 = (str: string) => {
 /*  utility type and function: constructor (function)  */
 export type Cons<T extends any = any> = new (...args: any[]) => T;
 export type AbstractCons<T extends any = any> = abstract new (...args: any[]) => T;
-export type AnyCons<T extends any = any> = Cons<T> | AbstractCons<T>;
+
+/**
+ * Any constructor: public concrete, public abstract, **or non-public**
+ * (protected / private constructor – no public construct signature).
+ */
+export type AnyCons<T extends any = any> =
+  | Cons<T>
+  | AbstractCons<T>
+  | (Function & { prototype: T });
+
 const isCons = <T extends any = any>(fn: unknown): fn is Cons<T> =>
   typeof fn === "function" && !!fn.prototype && !!fn.prototype.constructor;
 
@@ -36,6 +45,16 @@ type ConsFactory<T extends AnyCons = AnyCons, B extends any = any> = (base: B) =
 type TypeFactory<T extends any = any> = () => T;
 const isTypeFactory = <T extends any = any>(fn: unknown): fn is TypeFactory<T> =>
   typeof fn === "function" && !fn.prototype && fn.length === 0;
+
+/*  Broader type that accepts:
+ *  - plain SubTrait
+ *  - non-generic type factory  () => SubTrait
+ *  - generic type factory      <T>() => SubTrait
+ */
+type AnyTraitOrFactory = SubTrait | TypeFactory<SubTrait> | ((...args: any[]) => SubTrait);
+
+/*  Type-level check that also accepts generic factories */
+type IsTypeFactory<T> = T extends (...args: any[]) => SubTrait ? true : false;
 
 /*  utility type: map an object type into a bare properties type  */
 type Explode<T extends any> = { [P in keyof T]: T[P] };
@@ -53,6 +72,15 @@ type MixParams<T1 extends any[], T2 extends any[]> = T1 extends []
         : []
       : [];
 
+/*  Loose instance type that still works when the construct signature is missing */
+export type LooseInstanceType<T> = T extends abstract new (...args: any) => infer R
+  ? R
+  : T extends new (...args: any) => infer R
+    ? R
+    : T extends { prototype: infer P }
+      ? P
+      : any;
+
 /*  ==== TRAIT DEFINITION ====  */
 
 /*  API: trait type  */
@@ -61,8 +89,8 @@ type TraitDefTypeST = (SubTrait | TypeFactory<SubTrait>)[] | undefined;
 export interface Trait<T extends AnyCons<any> = AnyCons<any>> {
   id: number /* unique id (primary,   for hasTrait)      */;
   symbol: symbol /* unique id (secondary, currently unused)  */;
-	factory: (b: any) => T;
-	superTraits: undefined;
+  factory: (b: any) => T;
+  superTraits: undefined;
 }
 export interface SubTrait<
   T extends AnyCons<any> = AnyCons<any>,
@@ -119,12 +147,8 @@ type ExtractSuperTrait<T extends SubTrait> =
 
 /*  ---- TRAIT CONSTRUCTOR DERIVATION ----  */
 
-/*  utility type: is this constructor concrete (not abstract)?  */
-type IsConcreteCons<C> = C extends abstract new (...args: any[]) => any
-  ? C extends new (...args: any[]) => any
-    ? true
-    : false
-  : false;
+/*  utility type: is this constructor concrete (has a public `new` signature)?  */
+type IsConcreteCons<C> = C extends new (...args: any[]) => any ? true : false;
 
 /*  utility type: constructor type that is concrete only if the flag says so  */
 type ConsOf<Concrete extends boolean, Args extends any[], R> = Concrete extends true
@@ -141,15 +165,19 @@ type DeriveTraitsConsConsMerge<A extends AnyCons, B extends AnyCons> = A extends
         MixParams<ArgsA, ArgsB>,
         RetA & RetB
       >
-    : never
-  : never;
+    : /* B has no public construct signature */
+      ConsOf<IsConcreteCons<A>, ArgsA, RetA & LooseInstanceType<B>>
+  : B extends abstract new (...args: infer ArgsB) => infer RetB
+    ? /* A has no public construct signature */
+      ConsOf<IsConcreteCons<B>, ArgsB, LooseInstanceType<A> & RetB>
+    : /* both non-public → abstract constructor with merged instance type */
+      abstract new (...args: any[]) => LooseInstanceType<A> & LooseInstanceType<B>;
 
 /*  utility type: derive type constructor: extract plain constructor  */
-type DeriveTraitsConsCons<T extends AnyCons> = ConsOf<
-  IsConcreteCons<T>,
-  ConstructorParameters<T>,
-  InstanceType<T>
->;
+type DeriveTraitsConsCons<T extends AnyCons> = T extends abstract new (...args: any) => any
+  ? ConsOf<IsConcreteCons<T>, ConstructorParameters<T>, InstanceType<T>>
+  : /* no public construct signature → treat as abstract */
+    abstract new (...args: any[]) => LooseInstanceType<T>;
 
 /*  utility type: derive type constructor: from trait parts  */
 type DeriveTraitsConsTraitParts<
@@ -167,46 +195,45 @@ type DeriveTraitsConsTrait<T extends SubTrait> = DeriveTraitsConsTraitParts<
   ExtractSuperTrait<T>
 >;
 
-/*  utility type: derive type constructor: from single trait or trait factory  */
-type DeriveTraitsConsOne<T extends SubTrait | TypeFactory<SubTrait>> = T extends SubTrait
+/*  utility type: derive type constructor: from single trait or trait factory
+ *  (accepts plain SubTrait, () => SubTrait, and <T>() => SubTrait)
+ */
+type DeriveTraitsConsOne<T extends AnyTraitOrFactory> = T extends SubTrait
   ? DeriveTraitsConsTrait<T>
-  : T extends TypeFactory<SubTrait>
-    ? DeriveTraitsConsTrait<ReturnType<T>>
+  : IsTypeFactory<T> extends true
+    ? T extends (...args: any[]) => infer R
+      ? R extends SubTrait
+        ? DeriveTraitsConsTrait<R>
+        : never
+      : never
     : never;
 
 /*  utility type: derive type constructor: from one or more traits or trait factories  */
 type DeriveTraitsConsAll<
-  T extends
-    | ((SubTrait | TypeFactory<SubTrait>)[] | [...(SubTrait | TypeFactory<SubTrait>)[], AnyCons])
-    | undefined,
-> = T extends [
-  ...infer Others extends (SubTrait | TypeFactory<SubTrait>)[],
-  infer Last extends AnyCons,
-]
-  ? DeriveTraitsConsConsMerge<
-      DeriveTraitsConsAll<Others> /* RECURSION */,
-      DeriveTraitsConsCons<Last>
-    >
-  : T extends (SubTrait | TypeFactory<SubTrait>)[]
-    ? T extends [infer First extends SubTrait | TypeFactory<SubTrait>]
+  T extends (AnyTraitOrFactory[] | [...AnyTraitOrFactory[], AnyCons]) | undefined,
+> =
+  /*  1st: a pure list of traits / trait factories (checked first, because `AnyCons`
+   *  also matches any function type and would otherwise swallow a trailing factory)  */
+  T extends AnyTraitOrFactory[]
+    ? T extends [infer First extends AnyTraitOrFactory]
       ? DeriveTraitsConsOne<First>
-      : T extends [
-            infer First extends SubTrait | TypeFactory<SubTrait>,
-            ...infer Rest extends (SubTrait | TypeFactory<SubTrait>)[],
-          ]
+      : T extends [infer First extends AnyTraitOrFactory, ...infer Rest extends AnyTraitOrFactory[]]
         ? DeriveTraitsConsConsMerge<
             DeriveTraitsConsOne<First>,
             DeriveTraitsConsAll<Rest>
           > /* RECURSION */
         : never
-    : never;
+    : /*  2nd: traits followed by a trailing regular class  */
+      T extends [...infer Others extends AnyTraitOrFactory[], infer Last extends AnyCons]
+      ? DeriveTraitsConsConsMerge<
+          DeriveTraitsConsAll<Others> /* RECURSION */,
+          DeriveTraitsConsCons<Last>
+        >
+      : never;
 
 /*  utility type: derive type constructor  */
-type DeriveTraitsCons<
-  T extends
-    | (SubTrait | TypeFactory<SubTrait>)[]
-    | [...(SubTrait | TypeFactory<SubTrait>)[], AnyCons],
-> = DeriveTraitsConsAll<T>;
+type DeriveTraitsCons<T extends AnyTraitOrFactory[] | [...AnyTraitOrFactory[], AnyCons]> =
+  DeriveTraitsConsAll<T>;
 
 /*  ---- TRAIT STATICS DERIVATION ----  */
 
@@ -235,55 +262,48 @@ type DeriveTraitsStatsTrait<T extends SubTrait> = DeriveTraitsStatsTraitParts<
   ExtractSuperTrait<T>
 >;
 
-/*  utility type: derive type statics: from single trait or trait factory  */
-type DeriveTraitsStatsOne<T extends SubTrait | TypeFactory<SubTrait>> = T extends SubTrait
+/*  utility type: derive type statics: from single trait or trait type factory  */
+type DeriveTraitsStatsOne<T extends AnyTraitOrFactory> = T extends SubTrait
   ? DeriveTraitsStatsTrait<T>
-  : T extends TypeFactory<SubTrait>
-    ? DeriveTraitsStatsTrait<ReturnType<T>>
+  : IsTypeFactory<T> extends true
+    ? T extends (...args: any[]) => infer R
+      ? R extends SubTrait
+        ? DeriveTraitsStatsTrait<R>
+        : never
+      : never
     : never;
 
 /*  utility type: derive type statics: from one or more traits or trait factories  */
 type DeriveTraitsStatsAll<
-  T extends
-    | ((SubTrait | TypeFactory<SubTrait>)[] | [...(SubTrait | TypeFactory<SubTrait>)[], AnyCons])
-    | undefined,
-> = T extends [
-  ...infer Others extends (SubTrait | TypeFactory<SubTrait>)[],
-  infer Last extends AnyCons,
-]
-  ? DeriveTraitsStatsConsMerge<
-      DeriveTraitsStatsAll<Others> /* RECURSION */,
-      DeriveTraitsStatsCons<Last>
-    >
-  : T extends (SubTrait | TypeFactory<SubTrait>)[]
-    ? T extends [infer First extends SubTrait | TypeFactory<SubTrait>]
+  T extends (AnyTraitOrFactory[] | [...AnyTraitOrFactory[], AnyCons]) | undefined,
+> =
+  /*  1st: a pure list of traits / trait factories (see DeriveTraitsConsAll)  */
+  T extends AnyTraitOrFactory[]
+    ? T extends [infer First extends AnyTraitOrFactory]
       ? DeriveTraitsStatsOne<First>
-      : T extends [
-            infer First extends SubTrait | TypeFactory<SubTrait>,
-            ...infer Rest extends (SubTrait | TypeFactory<SubTrait>)[],
-          ]
+      : T extends [infer First extends AnyTraitOrFactory, ...infer Rest extends AnyTraitOrFactory[]]
         ? DeriveTraitsStatsConsMerge<
             DeriveTraitsStatsOne<First>,
             DeriveTraitsStatsAll<Rest>
           > /* RECURSION */
         : never
-    : never;
+    : /*  2nd: traits followed by a trailing regular class  */
+      T extends [...infer Others extends AnyTraitOrFactory[], infer Last extends AnyCons]
+      ? DeriveTraitsStatsConsMerge<
+          DeriveTraitsStatsAll<Others> /* RECURSION */,
+          DeriveTraitsStatsCons<Last>
+        >
+      : never;
 
 /*  utility type: derive type statics  */
-type DeriveTraitsStats<
-  T extends
-    | (SubTrait | TypeFactory<SubTrait>)[]
-    | [...(SubTrait | TypeFactory<SubTrait>)[], AnyCons],
-> = DeriveTraitsStatsAll<T>;
+type DeriveTraitsStats<T extends AnyTraitOrFactory[] | [...AnyTraitOrFactory[], AnyCons]> =
+  DeriveTraitsStatsAll<T>;
 
 /*  ---- TRAIT DERIVATION ----  */
 
 /*  utility type: derive type from one or more traits or trait type factories  */
-type DeriveTraits<
-  T extends
-    | (SubTrait | TypeFactory<SubTrait>)[]
-    | [...(SubTrait | TypeFactory<SubTrait>)[], AnyCons],
-> = DeriveTraitsCons<T> & DeriveTraitsStats<T>;
+type DeriveTraits<T extends AnyTraitOrFactory[] | [...AnyTraitOrFactory[], AnyCons]> =
+  DeriveTraitsCons<T> & DeriveTraitsStats<T>;
 
 /*  ---- TRAIT DERIVATION RUNTIME ----  */
 
@@ -330,9 +350,7 @@ const reverseTraitList = (traits: (SubTrait | TypeFactory<SubTrait>)[]) =>
 
 /** implement trait  */
 export function impl<
-  T extends
-    | [SubTrait | TypeFactory<SubTrait>, ...(SubTrait | TypeFactory<SubTrait>)[]]
-    | [...(SubTrait | TypeFactory<SubTrait>)[], AnyCons],
+  T extends [AnyTraitOrFactory, ...AnyTraitOrFactory[]] | [...AnyTraitOrFactory[], AnyCons],
 >(...traits: T): DeriveTraits<T> {
   /*  run-time sanity check  */
   if (traits.length === 0)
@@ -364,7 +382,7 @@ export function impl<
 /*  ==== TRAIT TYPE-GUARDING ====  */
 
 /*  internal type: implements trait type  */
-type DerivedType<T extends SubTrait> = InstanceType<ExtractFactory<T>>;
+type DerivedType<T extends SubTrait> = LooseInstanceType<ExtractFactory<T>>;
 
 /*  internal type: implements trait type or trait type factory  */
 type Derived<T extends SubTrait | TypeFactory<SubTrait> | Cons> =

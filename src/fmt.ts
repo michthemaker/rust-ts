@@ -7,6 +7,10 @@ export const Debug = trait((b) => {
       options: FmtOptions,
       inspect: (arg: any, options: FmtOptions) => string,
     ): string;
+    // @ts-ignore
+    protected constructor(...args: any[]) {
+      super();
+    }
   }
   return Debug;
 });

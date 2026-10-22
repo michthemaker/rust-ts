@@ -151,6 +151,10 @@ export class Sender<T> extends impl(Clone, ChannelHandle<any>) {
     return ERR_DISPOSED_SENDER;
   }
 
+  constructor(protected internals: ChannelInternals<T>) {
+    super();
+  }
+
   clone() {
     if (this.disposed) throw new Error("Cannot clone disposed Sender");
     Atomics.add(this.internals.state, IDX_TX_COUNT, 1);
@@ -271,6 +275,10 @@ export class Sender<T> extends impl(Clone, ChannelHandle<any>) {
 export class Receiver<T> extends impl(Clone, ChannelHandle<any>) {
   static {
     register("rust-ts::sync::mpmc::Receiver", this);
+  }
+
+  constructor(protected internals: ChannelInternals<T>) {
+    super();
   }
 
   protected get disposeError() {

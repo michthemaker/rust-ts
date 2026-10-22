@@ -96,6 +96,13 @@ export class FixedArray<T, N extends number> extends Slice<T> {
     }
     return copy;
   }
+
+  /**
+   * Do not call this. FixedArray doesn't implement Default trait
+   */
+  static default(): any {
+    throw new Error(`FixedArray doesn't isn't implemented`);
+  }
 }
 
 type MapTransformFn<T, U> = (v: T, index: number) => U;

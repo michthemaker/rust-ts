@@ -80,29 +80,24 @@ export function main() {
   console.log(impls(vec(), Debug));
   console.log(impls(vec(), Clone));
   console.log(vec([0, 290, 0o7272]).clone());
+  console.log(is_eq(Result.Ok(d32("0")), Result.Err(d32("0"))));
+  console.log(is_eq(Option.Some(d32("0")), Option.Some(d32("0"))));
+
+  console.log(vec<number>().eq(new FixedArray(0, 0).clone().get(range(0, 0)).unwrap()), "je");
+
+  console.log(is_eq(vec([0, 2]).get(range(0, 1)).unwrap(), vec([0])));
+
+  console.log(is_eq(Tuple(0, d32("92")), Tuple()));
+
+  const mine_3 = OnceLock.default<d32>();
+
+  console.log(mine_3);
+
+  const mine_4 = Default.default(OnceLock<number>);
+
+  // @ts-expect-error
+  println("name {:?}", d32("0.2"));
+
+  console.log(Option.Some("29").clone());
+  console.log(mine_4);
 }
-// @ts-expect-error
-println("name {:?}", d32("0.2"));
-
-console.log(Option.Some("29").clone());
-
-// solve this bug later
-// console.log(Tuple(0, Tuple(0)));
-// console.log(FixedArray.from_fn(5, () => Tuple(0, 0)));
-
-console.log(is_eq(Result.Ok(d32("0")), Result.Err(d32("0"))));
-console.log(is_eq(Option.Some(d32("0")), Option.Some(d32("0"))));
-
-console.log(vec<number>().eq(new FixedArray(0, 0).clone().get(range(0, 0)).unwrap()), "je");
-
-console.log(is_eq(vec([0, 2]).get(range(0, 1)).unwrap(), vec([0])));
-
-console.log(is_eq(Tuple(0, d32("92")), Tuple()));
-
-const mine_3 = OnceLock.default<d32>();
-
-console.log(mine_3);
-
-const mine_4 = Default.default(OnceLock<number>);
-
-console.log(mine_4);

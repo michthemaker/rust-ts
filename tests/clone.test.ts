@@ -1,12 +1,37 @@
+// @ts-nocheck
 import { expect, test } from "bun:test";
 import { Clone, derive_clone } from "../src/clone";
-import { impl } from "../src/trait";
+import { impl, trait } from "../src/trait";
+import { Default } from "../src/default";
+import { PartialEq } from "../src/cmp";
+
+// const Dyn = trait([Default], (b: any) => {
+//   return class Dyn extends b {};
+// });
+//
+// const GenericDyn = <T>() =>
+//   trait([Default], (b: any) => {
+//     return class Dyn extends b {};
+//   });
+// const genericdyn_impled = impl(GenericDyn);
+// const genericdyn_genericdyn_impled = impl(GenericDyn, GenericDyn);
+//
+// const see_clone = Clone;
+//
+// const clone_impled = impl(Clone);
+// const clone_clone_impled = impl(Clone, Clone);
+// const default_clone_impled = impl(Clone, Default);
+// const default_impled = impl(Default);
+// const dyn_impled = impl(Dyn);
+// const dyn_dyn_impled = impl(Dyn, Dyn);
+// const dyn_default_impled = impl(Dyn, Default);
 
 test("derive clone", () => {
   class Point extends impl(Clone) {
     constructor(
       public x: number,
       public y: number,
+      z,
     ) {
       super();
     }

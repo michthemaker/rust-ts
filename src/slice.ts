@@ -6,6 +6,7 @@ import { Range } from "./range";
 import { impl } from "./trait";
 import { Debug, FMT } from "./fmt";
 import { Clone, clone_of } from "./clone";
+import { Default } from "./default";
 
 const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 const INDEX = /^(0|[1-9]\d*)$/;
@@ -59,7 +60,7 @@ function as_array<T>(src: Source<T>): readonly T[] {
  * Never copies on construction. Sub-slices share `buf`, so mutation through
  * one view is visible in the owner (and in every overlapping view).
  */
-export abstract class Slice<T> extends impl(PartialEq<Source<any>>, Debug, Clone) {
+export abstract class Slice<T> extends impl(PartialEq<Source<any>>, Default, Debug, Clone) {
   protected buf: T[];
   protected start: number;
   protected _len: number;

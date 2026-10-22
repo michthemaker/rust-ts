@@ -34,7 +34,7 @@ export class Vec<T> extends Slice<T> {
     return `Vec[${formatted_elements.join(", ")}]`;
   }
 
-  private constructor(capacity: number, array?: Array<T>) {
+  protected constructor(capacity: number, array?: Array<T>) {
     if (capacity > MAX_ARRAY_LENGTH || capacity < 0)
       throw new Error(
         `Requested allocation on Vec<T> exceeds engine memory limits.\nMaximum Vec<T> capacity is ${MAX_ARRAY_LENGTH}`,
@@ -506,6 +506,10 @@ export class Vec<T> extends Slice<T> {
       copy[i] = clone_of(item);
     }
     return copy;
+  }
+
+  static default<T>() {
+    return new Vec<T>(0);
   }
 }
 

@@ -22,10 +22,14 @@ export function derive_clone<T extends object>(self: T): T {
   return copy;
 }
 
-export const Clone = <T = any>() =>
+export const Clone = <T>() =>
   trait((b) => {
     abstract class Clone extends b {
       abstract clone(): T;
+      // @ts-ignore
+      protected constructor(...args: any[]) {
+        super();
+      }
     }
     return Clone;
   });
