@@ -1,0 +1,14 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["import"],
+	"rules": {
+		"import/extensions": [
+			"error",
+			"always",
+			{
+				"ts": "always",
+				"tsx": "always"
+			}
+		]
+	}
+}
