@@ -4,6 +4,8 @@
  **  Licensed under MIT license <https://spdx.org/licenses/MIT>
  */
 
+import { is_sub_class_of } from "../lib/is_sub_class";
+
 /* eslint no-use-before-define: off */
 
 /*  ==== UTILITY DEFINITIONS ====  */
@@ -77,7 +79,7 @@ export type LooseInstanceType<T> = T extends abstract new (...args: any) => infe
   ? R
   : T extends new (...args: any) => infer R
     ? R
-    : T extends { prototype: infer P }
+    : T extends Function & { prototype: infer P }
       ? P
       : any;
 
@@ -405,27 +407,66 @@ export type TraitInstance<T extends SubTrait | TypeFactory<SubTrait>> =
       ? DerivedType<T>
       : never;
 
-/** type guard for checking whether class instance implements a trait  */
+function is_strict_class(value: any) {
+  if (typeof value !== "function") return false;
+  const descriptor = Object.getOwnPropertyDescriptor(value, "prototype");
+  // Built-in functions like Math.max don't have a prototype, while classes always do
+  return descriptor ? !descriptor.writable : false;
+}
+
+/**
+ * type guard for checking whether class instance or class itself implements a trait
+ *
+ * @example
+ * ``typescript
+ * if (impls(Vec<number>, Debug)) {}
+ * ``
+ * @example
+ * ``typescript
+ * if (impls(new Vec<number>(0), Debug)) {}
+ * ``
+ */
 export function impls<T extends SubTrait | TypeFactory<SubTrait> | Cons>(
-  instance: unknown,
+  instance_or_class: unknown,
   trait: T,
-): instance is Derived<T> {
+): instance_or_class is Derived<T> {
   /*  ensure the class instance is really an object  */
-  if (typeof instance !== "object" || instance === null) return false;
-  let obj = instance;
+  if (
+    is_strict_class(instance_or_class) ||
+    (typeof instance_or_class === "object" && instance_or_class !== null)
+  ) {
+    let obj = instance_or_class;
 
-  /*  special case: regular class  */
-  if (isCons(trait) && !isTypeFactory(trait)) return instance instanceof trait;
-
-  /*  regular case: trait or trait type factory...  */
-  const t = (isTypeFactory(trait) ? trait() : trait) as SubTrait;
-  const idTrait = t["id"];
-  while (obj) {
-    if (Object.hasOwn(obj, "constructor")) {
-      const id = ((obj.constructor as any)["id"] as number) ?? 0;
-      if (id === idTrait) return true;
+    /*  special case: regular class  */
+    if (isCons(trait) && !isTypeFactory(trait)) {
+      if (is_strict_class(instance_or_class))
+        return is_sub_class_of(instance_or_class as any, trait);
+      else return instance_or_class instanceof trait;
     }
-    obj = Object.getPrototypeOf(obj);
+
+    /*  regular case: trait or trait type factory...  */
+    const t = (isTypeFactory(trait) ? trait() : trait) as SubTrait;
+    const trait_id = t["id"];
+
+    // class itself like Vec<T>
+    if (is_strict_class(instance_or_class)) {
+      let current = instance_or_class;
+
+      // Traverse up the prototype chain
+      while (current !== null) {
+        if (Object.getPrototypeOf(current)?.["id"] === trait_id) return true;
+        current = Object.getPrototypeOf(current);
+      }
+    }
+
+    // class instance like new Vec<number>
+    while (obj) {
+      if (Object.hasOwn(obj, "constructor")) {
+        const id = ((obj.constructor as any)["id"] as number) ?? 0;
+        if (id === trait_id) return true;
+      }
+      obj = Object.getPrototypeOf(obj);
+    }
   }
   return false;
 }

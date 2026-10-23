@@ -3,15 +3,20 @@ import { define_pattern, Pattern } from "./match";
 import { is_eq } from "./cmp";
 import { Vec as Impl } from "./vec_impl";
 
-// Numeric Indexable<T> interface
-interface Vec<T> extends Impl<T> {}
-
-interface VecConstructor {
-  new: <T>() => Vec<T>;
-  with_capacity: <T>(capacity: number) => Vec<T>;
+class Vec<T> extends Impl<T> {
+  constructor() {
+    // @ts-expect-error
+    super(...arguments);
+  }
 }
 
-const Vec = Impl as unknown as VecConstructor;
+interface Vec<T> extends Impl<T> {}
+
+declare module "./default.ts" {
+  interface DefaultCall {
+    default<T extends typeof Vec<any>>(type: T): T extends typeof Vec<infer U> ? Vec<U> : never;
+  }
+}
 
 /** `vec![]` */
 function vec<T>(): Vec<T>;

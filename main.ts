@@ -12,7 +12,7 @@ import { Result } from "./src/result.ts";
 import { OnceLock } from "./src/sync/once_lock.ts";
 import { impls } from "./src/trait.ts";
 import { Tuple } from "./src/tuple.ts";
-import { vec } from "./src/vec.ts";
+import { vec, Vec } from "./src/vec.ts";
 
 export function main() {
   console.log(i8(127));
@@ -101,3 +101,22 @@ export function main() {
   console.log(Option.Some("29").clone());
   console.log(mine_4);
 }
+
+main();
+const more = new Vec<number>();
+console.log(more.clone());
+const mine = Default.default(Vec<string>);
+Default.default(OnceLock<string>);
+Vec.default<string>();
+
+// console.log(FixedArray(0, 8)[8]);
+
+mine.push("900");
+mine.push("0000");
+
+mine.push("0000");
+mine.push("0000");
+mine.push("0000");
+println("working x2 {} ", 3);
+println("{:?}", "nameing");
+println("working x2 {:?} ", 1000_000_0000_0000_0000_0000_0000_0000n);

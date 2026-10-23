@@ -101,7 +101,7 @@ export class FixedArray<T, N extends number> extends Slice<T> {
    * Do not call this. FixedArray doesn't implement Default trait
    */
   static default(): any {
-    throw new Error(`FixedArray doesn't isn't implemented`);
+    throw new Error(`FixedArray doesn't implement Default trait`);
   }
 }
 

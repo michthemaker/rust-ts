@@ -1,19 +1,28 @@
-import { is_sub_class_of } from "../lib/is_sub_class";
-import { LooseInstanceType, Trait as TTrait, trait } from "./trait";
+import { LooseInstanceType, Trait as TTrait, impls, trait } from "./trait";
 
 const __first_half = (() => {
-  // @ts-expect-error
-  abstract class Default<T> {
-    static default<T>(): Default<T> {
-      throw new Error(
-        `required static default method not implemented on ${this.name} that implements Default trait`,
-      );
-    }
+  return trait((b: any) => {
     // @ts-expect-error
-    protected constructor(...args: any[]) {}
-  }
-  return Default;
+    abstract class Default<T> extends b {
+      static default<T>(): Default<T> {
+        throw new Error(
+          `required static default method not implemented on ${this.name} that implements Default trait`,
+        );
+      }
+      // @ts-expect-error
+      protected constructor(...args: any[]) {
+        super();
+      }
+    }
+    return Default;
+  });
 })();
+
+export type DefaultType = ReturnType<(typeof __first_half)["factory"]>;
+
+export interface DefaultCall {
+  default<T extends DefaultType>(type: T): LooseInstanceType<T>;
+}
 
 /**
  * @remarks Implement the static `default` method on the class implementing this trait
@@ -28,20 +37,16 @@ const __first_half = (() => {
  * ```
  */
 export const Default = (() => {
-  const Default = __first_half;
+  const Default = __first_half.factory(class {});
 
-  interface Trait<T extends typeof Default> extends TTrait<T> {
-    default<T extends typeof Default>(type: T): LooseInstanceType<T>;
-  }
+  interface Trait<T extends typeof Default> extends TTrait<T>, DefaultCall {}
 
-  const __Default = Object.assign(
-    trait(() => Default),
-    {
-      default<T extends typeof Default>(type: T) {
-        if (is_sub_class_of(type, Default)) return type.default() as LooseInstanceType<T>;
-        else throw new Error(`the trait bound ${type.name}: Default is not satisfied`);
-      },
+  const __Default = Object.assign(__first_half, {
+    default<T extends typeof Default>(type: T) {
+      // this will always fail, this
+      if (impls(type, __first_half)) return type.default();
+      else throw new Error(`the trait bound ${(type as any).name}: Default is not satisfied`);
     },
-  ) as unknown as Trait<typeof Default>;
+  }) as unknown as Trait<typeof Default>;
   return __Default;
 })();

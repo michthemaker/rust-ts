@@ -15,17 +15,56 @@ type FixedArray<T, N extends number> = TupleToIndices<FixedIndices<T, N>> & Impl
 
 interface FixedArrayConstructor {
   new <T, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
+  <T, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
   from_fn<T, N extends number>(N: N, f: (index: number) => T): FixedArray<T, N>;
+  /** FixedArray doesn't implement Default trait */
+  default(): never;
 }
 
-const FixedArray = Impl as unknown as FixedArrayConstructor;
+function FixedArrayImpl(this: any, initial_value: any, size: number) {
+  // Allow both `FixedArray(...)` and `new FixedArray(...)`
+  if (!(this instanceof FixedArrayImpl)) {
+    return new (FixedArrayImpl as any)(initial_value, size);
+  }
 
-declare module "./match" {
+  // Delegate to the real class constructor (which returns a Proxy)
+  return new Impl(initial_value, size);
+}
+
+// Copy statics from the real class
+FixedArrayImpl.from_fn = Impl.from_fn.bind(Impl);
+FixedArrayImpl.default = Impl.default.bind(Impl);
+
+// Make `instanceof FixedArray` work
+Object.defineProperty(FixedArrayImpl, Symbol.hasInstance, {
+  value(instance: any) {
+    return instance instanceof Impl;
+  },
+});
+
+// Prototype chain so methods are found when people look at the constructor
+FixedArrayImpl.prototype = Impl.prototype;
+
+const FixedArray = FixedArrayImpl as unknown as FixedArrayConstructor;
+
+declare module "./match.ts" {
   interface PatternKinds<T> {
     "rust-ts::std::FixedArray<T, N>": [T];
   }
   interface PatternInterface {
     FixedArray<T>(expected: T[]): Pat<"rust-ts::std::FixedArray<T, N>">;
+  }
+}
+
+declare module "./default.ts" {
+  interface DefaultCall {
+    /**
+     * FixedArray doesn't implement Default Trait
+     * @note Calling `Default.default(FixedArray<any, 0>)` will throw
+     */
+    default<T extends typeof FixedArray<any, any>>(
+      type: T extends typeof FixedArray<any, any> ? `FixedArray doesnt implement Default trait` : T,
+    ): never;
   }
 }
 
