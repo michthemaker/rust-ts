@@ -1,34 +1,34 @@
-import { is_eq } from "./cmp";
-import { define_pattern, Pattern } from "./match";
-import { Option } from "./option";
-import { FixedArray as Impl } from "./fixed_array_impl";
+import { is_eq } from "./cmp.ts";
+import { define_pattern, Pattern } from "./match.ts";
+import { Option } from "./option.ts";
+import { FixedArray as Impl } from "./fixed_array_impl.ts";
 
 type TupleToIndices<Tuple extends any[]> = {
-  [Index in Extract<keyof Tuple, `${number}`>]: Tuple[Index];
+	[Index in Extract<keyof Tuple, `${number}`>]: Tuple[Index];
 };
 
 type FixedIndices<T, N extends number, R extends T[] = []> = R["length"] extends N
-  ? R
-  : FixedIndices<T, N, [T, ...R]>;
+	? R
+	: FixedIndices<T, N, [T, ...R]>;
 
 type FixedArray<T, N extends number> = TupleToIndices<FixedIndices<T, N>> & Impl<T, N>;
 
 interface FixedArrayConstructor {
-  new <T, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
-  <T, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
-  from_fn<T, N extends number>(N: N, f: (index: number) => T): FixedArray<T, N>;
-  /** FixedArray doesn't implement Default trait */
-  default(): never;
+	new <T, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
+	<T, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
+	from_fn<T, N extends number>(N: N, f: (index: number) => T): FixedArray<T, N>;
+	/** FixedArray doesn't implement Default trait */
+	default(): never;
 }
 
 function FixedArrayImpl(this: any, initial_value: any, size: number) {
-  // Allow both `FixedArray(...)` and `new FixedArray(...)`
-  if (!(this instanceof FixedArrayImpl)) {
-    return new (FixedArrayImpl as any)(initial_value, size);
-  }
+	// Allow both `FixedArray(...)` and `new FixedArray(...)`
+	if (!(this instanceof FixedArrayImpl)) {
+		return new (FixedArrayImpl as any)(initial_value, size);
+	}
 
-  // Delegate to the real class constructor (which returns a Proxy)
-  return new Impl(initial_value, size);
+	// Delegate to the real class constructor (which returns a Proxy)
+	return new Impl(initial_value, size);
 }
 
 // Copy statics from the real class
@@ -37,9 +37,9 @@ FixedArrayImpl.default = Impl.default.bind(Impl);
 
 // Make `instanceof FixedArray` work
 Object.defineProperty(FixedArrayImpl, Symbol.hasInstance, {
-  value(instance: any) {
-    return instance instanceof Impl;
-  },
+	value(instance: any) {
+		return instance instanceof Impl;
+	}
 });
 
 // Prototype chain so methods are found when people look at the constructor
@@ -48,34 +48,34 @@ FixedArrayImpl.prototype = Impl.prototype;
 const FixedArray = FixedArrayImpl as unknown as FixedArrayConstructor;
 
 declare module "./match.ts" {
-  interface PatternKinds<T> {
-    "rust-ts::std::FixedArray<T, N>": [T];
-  }
-  interface PatternInterface {
-    FixedArray<T>(expected: T[]): Pat<"rust-ts::std::FixedArray<T, N>">;
-  }
+	interface PatternKinds<T> {
+		"rust-ts::std::FixedArray<T, N>": [T];
+	}
+	interface PatternInterface {
+		FixedArray<T>(expected: T[]): Pat<"rust-ts::std::FixedArray<T, N>">;
+	}
 }
 
 declare module "./default.ts" {
-  interface DefaultCall {
-    /**
-     * FixedArray doesn't implement Default Trait
-     * @note Calling `Default.default(FixedArray<any, 0>)` will throw
-     */
-    default<T extends typeof FixedArray<any, any>>(
-      type: T extends typeof FixedArray<any, any> ? `FixedArray doesnt implement Default trait` : T,
-    ): never;
-  }
+	interface DefaultCall {
+		/**
+		 * FixedArray doesn't implement Default Trait
+		 * @note Calling `Default.default(FixedArray<any, 0>)` will throw
+		 */
+		default<T extends typeof FixedArray<any, any>>(
+			type: T extends typeof FixedArray<any, any> ? `FixedArray doesnt implement Default trait` : T
+		): never;
+	}
 }
 
 Pattern.FixedArray = function (expected) {
-  return define_pattern("rust-ts::std::FixedArray<T, N>", (subject: any) => {
-    if (subject && subject instanceof Impl) {
-      const current = subject.to_array();
-      if (is_eq(current, expected)) return Option.Some([subject]);
-    }
-    return Option.None();
-  });
+	return define_pattern("rust-ts::std::FixedArray<T, N>", (subject: any) => {
+		if (subject && subject instanceof Impl) {
+			const current = subject.to_array();
+			if (is_eq(current, expected)) return Option.Some([subject]);
+		}
+		return Option.None();
+	});
 };
 
 export { FixedArray };
