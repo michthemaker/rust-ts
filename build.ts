@@ -10,7 +10,8 @@ console.log();
 await Bun.build({
 	entrypoints: entrypoints,
 	outdir: "./dist",
-	target: "node" // Change to "browser" if this is frontend code
+	target: "node", // Change to "browser" if this is frontend code,
+	splitting: true
 });
 
 console.log(`Successfully built ${entrypoints.length} modules!`);

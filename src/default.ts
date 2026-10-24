@@ -27,6 +27,8 @@ export interface DefaultCall {
 	default<T extends DefaultType>(type: T): LooseInstanceType<T>;
 }
 
+interface Trait<T extends DefaultType> extends TTrait<T>, DefaultCall {}
+
 /**
  * @remarks Implement the static `default` method on the class implementing this trait
  *
@@ -41,8 +43,6 @@ export interface DefaultCall {
  */
 export const Default = (() => {
 	const Default = __first_half.factory(class {});
-
-	interface Trait<T extends typeof Default> extends TTrait<T>, DefaultCall {}
 
 	const __Default = Object.assign(__first_half, {
 		default<T extends typeof Default>(type: T) {
