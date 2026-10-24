@@ -1,5 +1,5 @@
-import { impls, trait } from "./lang/index.ts";
-import type { Trait as TTrait, LooseInstanceType } from "./lang/index.ts";
+import { impls, trait } from "./trait_impl.ts";
+import type { Trait as TTrait, LooseInstanceType } from "./trait_impl.ts";
 
 const __first_half = (() => {
 	return trait((b: any) => {

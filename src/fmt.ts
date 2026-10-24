@@ -1,4 +1,4 @@
-import { trait } from "./lang/index.ts";
+import { trait } from "./trait_impl.ts";
 
 export const Debug = trait((b) => {
 	abstract class Debug extends b {

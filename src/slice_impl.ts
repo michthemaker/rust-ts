@@ -3,7 +3,7 @@ import { Option } from "./option.ts";
 import { Result } from "./result.ts";
 import type { Vec } from "./vec_impl.ts";
 import { type Range } from "./range.ts";
-import { impl } from "./lang/index.ts";
+import { impl } from "./trait_impl.ts";
 import { Debug, FMT } from "./fmt.ts";
 import { Clone, clone_of } from "./clone.ts";
 import { Default } from "./default.ts";

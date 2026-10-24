@@ -1,5 +1,5 @@
 import { is_eq } from "./cmp.ts";
-import { define_pattern, Pattern, type Pat } from "./lang/index.ts";
+import { define_pattern, Pattern, type Pat } from "./match_impl.ts";
 import { Option } from "./option.ts";
 import { FixedArray as Impl } from "./array_impl.ts";
 
@@ -47,7 +47,7 @@ FixedArrayImpl.prototype = Impl.prototype;
 
 const FixedArray = FixedArrayImpl as unknown as FixedArrayConstructor;
 
-declare module "./lang/index.ts" {
+declare module "./match_impl.ts" {
 	interface PatternKinds<T> {
 		"rust-ts::std::FixedArray<T, N>": [T];
 	}

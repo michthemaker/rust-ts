@@ -1,4 +1,4 @@
-import { impls, trait } from "./lang/index.ts";
+import { impls, trait } from "./trait_impl.ts";
 
 export const PartialEq = <T>() =>
 	trait((b) => {

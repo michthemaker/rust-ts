@@ -55,7 +55,7 @@ type ValidateFormat<
 							: `Error: argument ${Index["length"]} does not implement Display, required for '{}'`
 		: never;
 
-const println_impl = (() => {
+const format_impl = (() => {
 	// The implementation below has a plain, boring signature on purpose: pairing an
 	// overloaded, deeply recursive generic type directly with an implementation body
 	// is what triggered "Type instantiation is excessively deep" here (confirmed by
@@ -63,16 +63,14 @@ const println_impl = (() => {
 	// only adding a real body did). Casting a simply-typed implementation to the
 	// fancy overloaded type sidesteps that check entirely, and the body is identical
 	// to what it would otherwise be.
-	return function println(format?: string, ...args: unknown[]): void {
-		if (format === undefined) return void console.log();
-
+	return function format(format: string, ...args: unknown[]): string {
 		let next = 0;
 		const text = format.replace(/\{\{|\}\}|\{:\?\}|\{\}/g, (token) => {
 			if (token === "{{") return "{";
 			if (token === "}}") return "}";
 
 			if (next >= args.length)
-				throw new Error(`println: no argument for '${token}' placeholder ${next}`);
+				throw new Error(`format: no argument for '${token}' placeholder ${next}`);
 			const arg = args[next++];
 
 			const is_primitive =
@@ -84,27 +82,30 @@ const println_impl = (() => {
 			if (token === "{:?}") {
 				if (!is_primitive && !impls(arg, Debug))
 					throw new Error(
-						`println: argument ${next - 1} (${describe(arg)}) does not implement Debug, required for '{:?}'`
+						`format: argument ${next - 1} (${describe(arg)}) does not implement Debug, required for '{:?}'`
 					);
 				return debug_str(arg);
 			} else {
 				if (!is_primitive)
 					throw new Error(
-						`println: argument ${next - 1} (${describe(arg)}) does not implement Display, required for '{}'`
+						`format: argument ${next - 1} (${describe(arg)}) does not implement Display, required for '{}'`
 					);
 				return display_str(arg);
 			}
 		});
 
 		if (next !== args.length)
-			throw new Error(`println: ${args.length} arguments given but only ${next} placeholders used`);
-		console.log(text);
+			throw new Error(`format: ${args.length} arguments given but only ${next} placeholders used`);
+		return text;
 	};
 })();
 
-export const println = println_impl as {
-	(): void;
-	<Str extends string, Args extends any[]>(format: ValidateFormat<Str, Args>, ...args: Args): void;
+export const format = format_impl as {
+	<Str extends string>(format: Str): string;
+	<Str extends string, Args extends any[]>(
+		format: ValidateFormat<Str, Args>,
+		...args: Args
+	): string;
 };
 
 const describe = (v: unknown) => (v as any)?.constructor?.name ?? typeof v;
