@@ -1,7 +1,7 @@
 import { clone_of } from "./clone.ts";
 import { FMT } from "./fmt.ts";
 import { range } from "./range.ts";
-import { Slice } from "./slice.ts";
+import { Slice } from "./slice_impl.ts";
 import { Vec, vec } from "./vec.ts";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295;

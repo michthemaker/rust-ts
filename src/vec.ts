@@ -1,5 +1,5 @@
 import { Option } from "./option.ts";
-import { define_pattern, Pattern } from "./match.ts";
+import { define_pattern, Pattern, type Pat } from "./primitive/index.ts";
 import { is_eq } from "./cmp.ts";
 import { Vec as Impl } from "./vec_impl.ts";
 
@@ -38,7 +38,7 @@ function vec(arg1?: any, arg2?: any) {
 	else return Vec.from([]);
 }
 
-declare module "./match" {
+declare module "./primitive/index.ts" {
 	interface PatternKinds<T> {
 		"rust-ts::std::Vec<T>": T extends Vec<infer X> ? [X[]] : never;
 	}

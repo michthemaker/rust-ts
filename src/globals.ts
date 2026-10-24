@@ -1,5 +1,5 @@
 import { pick } from "../lib/pick.ts";
-import * as SizedNumbers from "./numbers.ts";
+import * as SizedNumbers from "./num.ts";
 
 declare global {
 	// number types

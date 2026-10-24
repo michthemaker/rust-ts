@@ -1,6 +1,6 @@
 import { FixedArray } from "../src/array.ts";
 import { describe, test, expect } from "bun:test";
-import { match, P } from "../src/match.ts";
+import { match, P } from "../src/match_impl.ts";
 
 describe("FixedArray<T, N>", () => {
 	test("can be indexed like arrays", () => {

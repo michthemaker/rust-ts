@@ -3,7 +3,7 @@ import { Option } from "./option.ts";
 import { range } from "./range.ts";
 import { FixedArray } from "./array.ts";
 import { Result } from "./result.ts";
-import { register_vec_factory, resolve_range, Slice } from "./slice.ts";
+import { register_vec_factory, resolve_range, Slice } from "./slice_impl.ts";
 import { type Range } from "./range.ts";
 import { FMT } from "./fmt.ts";
 import { clone_of } from "./clone.ts";

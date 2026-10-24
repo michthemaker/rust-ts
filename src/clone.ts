@@ -1,4 +1,4 @@
-import { impls, trait } from "./trait.ts";
+import { impls, trait } from "./primitive/index.ts";
 
 export function clone_of<T>(x: T): T {
 	if (x === null || typeof x !== "object") return x; // primitives and functions as-is

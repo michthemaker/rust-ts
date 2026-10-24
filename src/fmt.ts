@@ -1,4 +1,4 @@
-import { trait } from "./trait.ts";
+import { trait } from "./primitive/index.ts";
 
 export const Debug = trait((b) => {
 	abstract class Debug extends b {

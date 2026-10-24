@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { Clone, derive_clone } from "../src/clone.ts";
-import { impl } from "../src/trait.ts";
+import { impl } from "../src/primitive/index.ts";
 
 // const Dyn = trait([Default], (b: any) => {
 //   return class Dyn extends b {};

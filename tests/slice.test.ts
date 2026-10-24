@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { Slice as SliceView } from "../src/slice.ts";
+import { Slice as SliceView } from "../src/slice_impl.ts";
 import { OnceLock } from "../src/sync/once_lock.ts";
 import { inspect } from "node:util";
 import { FixedArray } from "../src/array.ts";
-import { match, P } from "../src/match.ts";
+import { match, P } from "../src/match_impl.ts";
 import { vec, Vec } from "../src/vec.ts";
 import { Result } from "../src/result.ts";
 

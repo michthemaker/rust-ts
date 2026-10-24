@@ -22,6 +22,7 @@ export type Pat<Kind extends string> = symbol & {
 const SYMBOL_WILDCARD = Symbol("Wildcard") as unknown as Pat<"rust-ts::std::match::Wildcard">;
 
 // kind name -> tuple of args the arm receives, or never if the kind doesn't apply to T
+// @ts-ignore
 // oxlint-disable-next-line no-unused-vars
 export interface PatternKinds<T> {
 	"rust-ts::std::match::Val<T>": [];

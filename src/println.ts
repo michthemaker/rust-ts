@@ -1,4 +1,4 @@
-import { impls, type TraitInstance } from "./trait.ts";
+import { impls, type TraitInstance } from "./primitive/index.ts";
 import { Debug, FMT } from "./fmt.ts";
 
 type DebugImpl = TraitInstance<typeof Debug>;

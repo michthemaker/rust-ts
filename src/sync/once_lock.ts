@@ -3,7 +3,7 @@ import { is_eq, PartialEq } from "../cmp.ts";
 import { Default } from "../default.ts";
 import { Debug, FMT, type FmtOptions } from "../fmt.ts";
 import { Result } from "../result.ts";
-import { impl } from "../trait.ts";
+import { impl } from "../primitive/index.ts";
 
 class OnceLock<T> extends impl(PartialEq, Default, Debug, Clone) {
 	#value: T | null = null;
