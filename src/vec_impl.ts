@@ -1,7 +1,7 @@
 import { is_eq } from "./cmp.ts";
 import { Option } from "./option.ts";
 import { range } from "./range.ts";
-import { FixedArray } from "./fixed_array.ts";
+import { FixedArray } from "./array.ts";
 import { Result } from "./result.ts";
 import { register_vec_factory, resolve_range, Slice } from "./slice.ts";
 import { type Range } from "./range.ts";

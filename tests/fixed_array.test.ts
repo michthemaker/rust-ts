@@ -1,4 +1,4 @@
-import { FixedArray } from "../src/fixed_array.ts";
+import { FixedArray } from "../src/array.ts";
 import { describe, test, expect } from "bun:test";
 import { match, P } from "../src/match.ts";
 

@@ -1,7 +1,7 @@
 import { is_eq } from "./cmp.ts";
 import { define_pattern, Pattern } from "./match.ts";
 import { Option } from "./option.ts";
-import { FixedArray as Impl } from "./fixed_array_impl.ts";
+import { FixedArray as Impl } from "./array_impl.ts";
 
 type TupleToIndices<Tuple extends any[]> = {
 	[Index in Extract<keyof Tuple, `${number}`>]: Tuple[Index];
