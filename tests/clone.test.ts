@@ -1,9 +1,6 @@
-// @ts-nocheck
 import { expect, test } from "bun:test";
-import { Clone, derive_clone } from "../src/clone";
-import { impl, trait } from "../src/trait";
-import { Default } from "../src/default";
-import { PartialEq } from "../src/cmp";
+import { Clone, derive_clone } from "../src/clone.ts";
+import { impl } from "../src/trait.ts";
 
 // const Dyn = trait([Default], (b: any) => {
 //   return class Dyn extends b {};
@@ -27,21 +24,20 @@ import { PartialEq } from "../src/cmp";
 // const dyn_default_impled = impl(Dyn, Default);
 
 test("derive clone", () => {
-  class Point extends impl(Clone) {
-    constructor(
-      public x: number,
-      public y: number,
-      z,
-    ) {
-      super();
-    }
-    clone() {
-      return derive_clone(this);
-    }
-  }
+	class Point extends impl(Clone) {
+		constructor(
+			public x: number,
+			public y: number
+		) {
+			super();
+		}
+		clone() {
+			return derive_clone(this);
+		}
+	}
 
-  const my_point = new Point(4, 5);
-  expect(my_point).toBe(my_point);
-  console.log(my_point.clone(), "cloned");
-  expect(my_point).to_equal(my_point.clone());
+	const my_point = new Point(4, 5);
+	expect(my_point).toBe(my_point);
+	console.log(my_point.clone(), "cloned");
+	expect(my_point).to_equal(my_point.clone());
 });

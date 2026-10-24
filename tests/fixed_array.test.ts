@@ -1,66 +1,66 @@
-import { FixedArray } from "../src/fixed_array";
+import { FixedArray } from "../src/fixed_array.ts";
 import { describe, test, expect } from "bun:test";
-import { match, P } from "../src/match";
+import { match, P } from "../src/match.ts";
 
 describe("FixedArray<T, N>", () => {
-  test("can be indexed like arrays", () => {
-    const nums = new FixedArray(5, 3);
-    console.log(nums);
-    expect(nums[2]).toBe(5);
-  });
-  test(".from_fn static call allocates array of size", () => {
-    const my_arrs = FixedArray.from_fn(5, (i) => ({ name: "John", job_index: i * 3 }));
-    const matched = match(my_arrs.get(2), {
-      [P.Some({ name: "John", job_index: 6 })](v) {
-        return v.job_index;
-      },
-      [P._]() {
-        return 7;
-      },
-    });
-    expect(matched).toBe(6);
-    console.log(my_arrs);
-    expect(my_arrs.len()).toBe(5);
-  });
-  test(".map returns array of the same length ", () => {
-    const my_nums = new FixedArray("string", 5);
-    const mapped = my_nums.map((v, i) => ({ index: i * i, v }));
-    expect(mapped.len()).toBe(5);
-    console.log(mapped);
-    expect(mapped.get(2).unwrap()).to_equal({ index: 4, v: "string" });
-  });
-  test(".to_vec returns a Vec<T> of same length ", () => {
-    const fixed_arr = FixedArray.from_fn(5, (i) => `${i} string`);
-    const to_vec = fixed_arr.to_vec();
-    console.log(to_vec);
-    expect(fixed_arr.len() as number).toBe(to_vec.len());
-    expect(to_vec.len()).toBe(5);
-    expect(to_vec.capacity()).toBe(5);
-    expect(to_vec[2]).toBe("2 string");
-  });
-  test(".clone makes a new FixedArray<T, N> ", () => {
-    const my_nums = new FixedArray("string", 5);
-    const cloned = my_nums.clone();
-    expect(my_nums.len()).toBe(cloned.len());
-    expect(my_nums).not.toBe(cloned);
-    console.log(my_nums, "\tmain");
-    console.log(cloned, "\tcloned");
-    expect(my_nums.get(2).unwrap()).to_equal(cloned.get(2).unwrap());
-  });
-  test("throws on .set index out of bounds", () => {
-    function throws() {
-      const nums = new FixedArray(4, 4);
-      // @ts-ignore
-      nums[4] = 9;
-    }
-    expect(throws).toThrow();
-  });
-  test("throws on .get index out of bounds", () => {
-    function throws() {
-      const nums = new FixedArray(4, 4);
-      // @ts-ignore
-      nums[8];
-    }
-    expect(throws).toThrow();
-  });
+	test("can be indexed like arrays", () => {
+		const nums = new FixedArray(5, 3);
+		console.log(nums);
+		expect(nums[2]).toBe(5);
+	});
+	test(".from_fn static call allocates array of size", () => {
+		const my_arrs = FixedArray.from_fn(5, (i) => ({ name: "John", job_index: i * 3 }));
+		const matched = match(my_arrs.get(2), {
+			[P.Some({ name: "John", job_index: 6 })](v) {
+				return v.job_index;
+			},
+			[P._]() {
+				return 7;
+			}
+		});
+		expect(matched).toBe(6);
+		console.log(my_arrs);
+		expect(my_arrs.len()).toBe(5);
+	});
+	test(".map returns array of the same length ", () => {
+		const my_nums = new FixedArray("string", 5);
+		const mapped = my_nums.map((v, i) => ({ index: i * i, v }));
+		expect(mapped.len()).toBe(5);
+		console.log(mapped);
+		expect(mapped.get(2).unwrap()).to_equal({ index: 4, v: "string" });
+	});
+	test(".to_vec returns a Vec<T> of same length ", () => {
+		const fixed_arr = FixedArray.from_fn(5, (i) => `${i} string`);
+		const to_vec = fixed_arr.to_vec();
+		console.log(to_vec);
+		expect(fixed_arr.len() as number).toBe(to_vec.len());
+		expect(to_vec.len()).toBe(5);
+		expect(to_vec.capacity()).toBe(5);
+		expect(to_vec[2]).toBe("2 string");
+	});
+	test(".clone makes a new FixedArray<T, N> ", () => {
+		const my_nums = new FixedArray("string", 5);
+		const cloned = my_nums.clone();
+		expect(my_nums.len()).toBe(cloned.len());
+		expect(my_nums).not.toBe(cloned);
+		console.log(my_nums, "\tmain");
+		console.log(cloned, "\tcloned");
+		expect(my_nums.get(2).unwrap()).to_equal(cloned.get(2).unwrap());
+	});
+	test("throws on .set index out of bounds", () => {
+		function throws() {
+			const nums = new FixedArray(4, 4);
+			// @ts-ignore
+			nums[4] = 9;
+		}
+		expect(throws).toThrow();
+	});
+	test("throws on .get index out of bounds", () => {
+		function throws() {
+			const nums = new FixedArray(4, 4);
+			// @ts-ignore
+			console.log(nums[8]);
+		}
+		expect(throws).toThrow();
+	});
 });
