@@ -2,11 +2,11 @@ import "../result.ts"; // Registers Result type
 import "../option.ts"; // Just utilities, no hydration needed
 import "../sync/mpsc.ts"; // Registers Sender/Receiver hydrators
 import "../sync/mpmc.ts"; // Registers Sender/Receiver hydrators
-import "./threads.ts"; // Registers spawn/move hydrators
+import "./index.ts"; // Registers spawn/move hydrators
 import { type BunMessageEvent } from "bun";
 import { HIDDEN_RESULT_TAG } from "../result.ts";
 import { patch_dynamic_imports } from "../../lib/patch_dynamic_import.ts";
-import { type WorkerPayload } from "./types.ts";
+import { type WorkerPayload } from "./types";
 import { deserialize } from "./serializable.ts";
 
 globalThis.addEventListener(

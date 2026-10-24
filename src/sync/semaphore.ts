@@ -1,4 +1,4 @@
-import { register, Serializable, to_deserialized, to_serialized } from "../threads/serializable.ts";
+import { register, Serializable, to_deserialized, to_serialized } from "../thread/serializable.ts";
 
 export const INTERNAL_SEMAPHORE_CONTROLLER = Symbol("Thread.InternalSemaphoreController");
 

@@ -1,5 +1,5 @@
 import { Transferable } from "./transferable.ts";
-import type { Envelope } from "./types.ts";
+import type { Envelope } from "./types";
 
 export const to_serialized = Symbol("Thread.Serialize");
 export const to_deserialized = Symbol("Thread.Deserialize");

@@ -5,10 +5,10 @@ import {
 	serialize,
 	to_deserialized,
 	to_serialized
-} from "../threads/serializable.ts";
+} from "../thread/serializable.ts";
 import { Result } from "../result.ts";
 import { INTERNAL_SEMAPHORE_CONTROLLER, Semaphore } from "./semaphore.ts";
-import { SharedJsonBuffer } from "../threads/shared_json_buffer.ts";
+import { SharedJsonBuffer } from "../thread/shared_json_buffer.ts";
 import { Option } from "../option.ts";
 import { match, P } from "../match.ts";
 import { impl } from "../trait.ts";
