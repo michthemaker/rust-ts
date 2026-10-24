@@ -1,6 +1,6 @@
-import { BunMessageEvent } from "bun";
+import { type BunMessageEvent } from "bun";
 import { Result as Core_Result } from "../result.ts";
-import { WorkerPayload } from "./types.ts";
+import { type WorkerPayload } from "./types.ts";
 import { serialize } from "./serializable.ts";
 import { Transferable } from "./transferable.ts";
 import { get_caller_location } from "../../lib/get_caller_location.ts";

@@ -1,5 +1,5 @@
 // inspect.ts
-import { FMT, FmtOptions } from "./fmt.ts";
+import { FMT, type FmtOptions } from "./fmt.ts";
 
 export type Inspect = (value: unknown, options?: FmtOptions) => string;
 

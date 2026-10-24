@@ -1,10 +1,10 @@
-import { Prettify } from "../lib/types.ts";
+import type { Prettify } from "../lib/types.ts";
 import { Clone } from "./clone.ts";
 import { PartialEq } from "./cmp.ts";
 import { Debug, FMT } from "./fmt.ts";
 import { match } from "./match.ts";
 import { Result } from "./result.ts";
-import { impl, TraitInstance } from "./trait.ts";
+import { impl, type TraitInstance } from "./trait.ts";
 
 export type Int<K extends string> = number & { readonly __num?: K };
 export type UInt<K extends string> = number & { readonly __num?: K };
@@ -441,8 +441,7 @@ export const f64: F64 = object_assign(
 // Arithmetic is done with methods instead: a.add(b), a.mul(b), ... They never mutate:
 // every one returns a new decimal, and the bigint math stays inside DecimalImpl.
 
-type DecimalKind = "d32" | "d64" | "d128";
-export default DecimalKind;
+export type DecimalKind = "d32" | "d64" | "d128";
 
 export interface Decimal<
 	K extends DecimalKind = DecimalKind,

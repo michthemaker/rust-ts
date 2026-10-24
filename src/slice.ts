@@ -2,7 +2,7 @@ import { is_eq, PartialEq } from "./cmp.ts";
 import { Option } from "./option.ts";
 import { Result } from "./result.ts";
 import type { Vec } from "./vec_impl.ts";
-import { Range } from "./range.ts";
+import { type Range } from "./range.ts";
 import { impl } from "./trait.ts";
 import { Debug, FMT } from "./fmt.ts";
 import { Clone, clone_of } from "./clone.ts";

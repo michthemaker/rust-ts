@@ -1,6 +1,6 @@
 import { Clone } from "./clone.ts";
 import { PartialEq } from "./cmp.ts";
-import { TraitInstance } from "./trait.ts";
+import { type TraitInstance } from "./trait.ts";
 import { Tuple as Impl } from "./tuple_impl.ts";
 
 /** "0", "1", ... only: the explicit positions, each with its own type */
