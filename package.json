@@ -1,42 +1,71 @@
 {
-	"name": "rust-ts",
-	"version": "1.0.0",
-	"private": true,
-	"description": "TypeScript port of some of Rust's most useful patterns and ergonomics.",
-	"keywords": [
-		"Zero-Dependency",
-		"ergonomics",
-		"lightweight",
-		"rust",
-		"rust-library",
-		"type-safe",
-		"typescript"
-	],
-	"homepage": "https://github.com/michthemaker/rust-ts",
-	"bugs": {
-		"url": "https://github.com/michthemaker/rust-ts/issues",
-		"email": "michthebrand@gmail.com"
-	},
-	"license": "MIT",
-	"author": "Michthebrand <michthebrand@gmail.com>",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/michthemaker/rust-ts.git",
-		"directory": "."
-	},
-	"files": [
-		"./src",
-		"./README.md",
-		"./.gitignore"
-	],
-	"type": "module",
-	"scripts": {},
-	"dependencies": {},
-	"devDependencies": {
-		"@types/bun": "latest",
-		"oxfmt": "^0.74.0",
-		"oxlint": "^1.89.0",
-		"oxlint-tsgolint": "^7.0.2005",
-		"typescript": "7.0.2"
-	}
+  "name": "rust-ts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TypeScript port of some of Rust's most useful patterns and ergonomics.",
+  "keywords": [
+    "Zero-Dependency",
+    "ergonomics",
+    "lightweight",
+    "rust",
+    "rust-library",
+    "type-safe",
+    "typescript"
+  ],
+  "homepage": "https://github.com/michthemaker/rust-ts",
+  "bugs": {
+    "url": "https://github.com/michthemaker/rust-ts/issues",
+    "email": "michthebrand@gmail.com"
+  },
+  "license": "MIT",
+  "author": "Michthebrand <michthebrand@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michthemaker/rust-ts.git",
+    "directory": "."
+  },
+  "files": [
+    "./lib",
+    "./src",
+    "./README.md",
+    "./.gitignore",
+    "./package.json",
+    "./tsconfig.json"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/prelude.ts",
+    "./array": "./src/array.ts",
+    "./clone": "./src/clone.ts",
+    "./cmp": "./src/cmp.ts",
+    "./default": "./src/default.ts",
+    "./fmt": "./src/fmt.ts",
+    "./globals": "./src/globals.ts",
+    "./inspect": "./src/inspect.ts",
+    "./lang": "./src/lang/index.ts",
+    "./macro": "./src/macro/index.ts",
+    "./num": "./src/num.ts",
+    "./option": "./src/option.ts",
+    "./primitive": "./src/primitive/index.ts",
+    "./range": "./src/range.ts",
+    "./result": "./src/result.ts",
+    "./sync/mpmc": "./src/sync/mpmc.ts",
+    "./sync/mpsc": "./src/sync/mpsc.ts",
+    "./sync/once_lock": "./src/sync/once_lock.ts",
+    "./sync/semaphore": "./src/sync/semaphore.ts",
+    "./thread": "./src/thread/index.ts",
+    "./thread/serializable": "./src/thread/serializable.ts",
+    "./thread/shared_json_buffer": "./src/thread/shared_json_buffer.ts",
+    "./thread/transferable": "./src/thread/transferable.ts",
+    "./vec": "./src/vec.ts"
+  },
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "latest",
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "oxlint-tsgolint": "^7.0.2005",
+    "typescript": "7.0.2"
+  }
 }

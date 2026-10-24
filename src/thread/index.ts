@@ -16,7 +16,7 @@ class JoinHandle<T> {
 	private join_promise: Promise<Result<T>>;
 
 	constructor(fn: Function, raw_args: UnserializedArgs, caller: string) {
-		this.worker = new Worker(new URL("./worker.ts", import.meta.url), {
+		this.worker = new Worker(new URL("./worker_impl.ts", import.meta.url), {
 			type: "module"
 		});
 
