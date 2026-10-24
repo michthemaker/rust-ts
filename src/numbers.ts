@@ -514,26 +514,23 @@ export interface Decimal<
  *
  * @remarks `S` is the scale: `d32<2>` is like `1.50`.
  */
-export interface d32<S extends number = number, P extends number = number> extends Prettify<
-	Decimal<"d32", S, P>
-> {}
+export interface d32<S extends number = number, P extends number = number>
+	extends Prettify<Decimal<"d32", S, P>>, TraitInstance<typeof Debug> {}
 /**
  * Exact decimal with up to 16 significant digits and 16 decimal places.
  *
  * @remarks `S` is the scale: `d64<2>` is like `1.50`.
  */
-export interface d64<S extends number = number, P extends number = number> extends Prettify<
-	Decimal<"d64", S, P>
-> {}
+export interface d64<S extends number = number, P extends number = number>
+	extends Prettify<Decimal<"d64", S, P>>, TraitInstance<typeof Debug> {}
 
 /**
  * Exact decimal with up to 28 significant digits and 28 decimal places.
  *
  * @remarks `S` is the scale: `d128<2>` is like `1.50`.
  */
-export interface d128<S extends number = number, P extends number = number> extends Prettify<
-	Decimal<"d128", S, P>
-> {}
+export interface d128<S extends number = number, P extends number = number>
+	extends Prettify<Decimal<"d128", S, P>>, TraitInstance<typeof Debug> {}
 
 // digits = significant digits, scale = digits after the point. Both limits apply on their
 // own, and the scale cap equals the digit cap, the same relationship rust_decimal has

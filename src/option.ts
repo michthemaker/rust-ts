@@ -7,7 +7,10 @@ import { impl, type TraitInstance } from "./trait.ts";
 export const HIDDEN_OPTION_TAG = "rust-ts::std::Option<T>";
 
 interface OptionMethods<T>
-	extends TraitInstance<typeof PartialEq<Option<T>>>, TraitInstance<typeof Clone<Option<T>>> {
+	extends
+		TraitInstance<typeof PartialEq<Option<T>>>,
+		TraitInstance<typeof Clone<Option<T>>>,
+		TraitInstance<typeof Debug> {
 	is_some(): this is Some<T>;
 	is_none(): this is None;
 	unwrap(): T;

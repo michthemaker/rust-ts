@@ -7,7 +7,10 @@ import { impl, type TraitInstance } from "./trait.ts";
 export const HIDDEN_RESULT_TAG = "rust-ts::std::Result<T, E>";
 
 interface ResultMethods<T, E>
-	extends TraitInstance<typeof PartialEq<Result<T, E>>>, TraitInstance<typeof Clone<Result<T, E>>> {
+	extends
+		TraitInstance<typeof PartialEq<Result<T, E>>>,
+		TraitInstance<typeof Clone<Result<T, E>>>,
+		TraitInstance<typeof Debug> {
 	is_ok(): this is Ok<T, E>;
 	is_err(): this is Err<T, E>;
 	unwrap(): T;

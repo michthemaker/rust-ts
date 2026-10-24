@@ -1,5 +1,6 @@
 import { Clone } from "./clone.ts";
 import { PartialEq } from "./cmp.ts";
+import type { Debug } from "./fmt.ts";
 import { type TraitInstance } from "./trait.ts";
 import { Tuple as Impl } from "./tuple_impl.ts";
 
@@ -16,7 +17,10 @@ type OtherMembers<T extends readonly unknown[]> = {
 };
 
 interface Traits<T extends readonly unknown[]>
-	extends TraitInstance<typeof Clone<Tuple<T>>>, TraitInstance<typeof PartialEq<Tuple<T>>> {}
+	extends
+		TraitInstance<typeof Clone<Tuple<T>>>,
+		TraitInstance<typeof PartialEq<Tuple<T>>>,
+		TraitInstance<typeof Debug> {}
 
 export type Tuple<T extends readonly unknown[]> = Indices<T> & OtherMembers<T> & Traits<T>;
 

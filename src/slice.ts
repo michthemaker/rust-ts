@@ -60,13 +60,7 @@ function as_array<T>(src: Source<T>): readonly T[] {
  * Never copies on construction. Sub-slices share `buf`, so mutation through
  * one view is visible in the owner (and in every overlapping view).
  */
-export abstract class Slice<T> extends impl(
-	Clone,
-	Default,
-	PartialEq<Source<any>>,
-	Debug,
-	class Abc {}
-) {
+export abstract class Slice<T> extends impl(Clone, Default, PartialEq<Source<any>>, Debug) {
 	protected buf: T[];
 	protected start: number;
 	protected _len: number;

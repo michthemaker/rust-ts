@@ -1,25 +1,23 @@
 {
 	"name": "rust-ts",
 	"version": "1.0.0",
-	"private": true,
-	"description": "",
-	"keywords": [],
-	"license": "ISC",
-	"author": "",
-	"type": "module",
-	"main": "main.ts",
-	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
-	},
 	"dependencies": {
 		"oxfmt": "^0.74.0",
 		"oxlint": "^1.89.0",
 		"oxlint-tsgolint": "^7.0.2005"
 	},
 	"devDependencies": {
-		"@types/bun": "latest"
+		"@types/bun": "latest",
+		"typescript": "7.0.2"
 	},
-	"peerDependencies": {
-		"typescript": "^7.0.2"
-	}
+	"description": "",
+	"files": [
+		"./src"
+	],
+	"private": true,
+	"scripts": {
+		"build": "tsup",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"type": "module"
 }
