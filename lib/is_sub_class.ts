@@ -1,4 +1,4 @@
-import { type AnyCons } from "../src/primitive/index.ts";
+import { type AnyCons } from "../src/lang/index.ts";
 
 export function is_sub_class_of(child_class: AnyCons<any>, parent_class: AnyCons<any>) {
 	let current = child_class;

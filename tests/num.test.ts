@@ -2,7 +2,7 @@ import "../src/globals.ts";
 import { expect, test, describe } from "bun:test";
 import { Result } from "../src/result.ts";
 import { inspect } from "bun";
-import { Tuple } from "../src/primitive/index.ts";
+import { Tuple } from "../src/lang/index.ts";
 
 describe("Sized numbers", () => {
 	const unsigned_types_and_edges = Tuple(

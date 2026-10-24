@@ -2,3 +2,4 @@
 *.sh
 all.txt
 /dist
+/project

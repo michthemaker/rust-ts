@@ -25,7 +25,9 @@
 		"directory": "."
 	},
 	"files": [
-		"./src"
+		"./src",
+		"./README.md",
+		"./.gitignore"
 	],
 	"type": "module",
 	"scripts": {},

@@ -1,5 +1,5 @@
-import { impls, trait } from "./primitive/index.ts";
-import type { Trait as TTrait, LooseInstanceType } from "./primitive/index.ts";
+import { impls, trait } from "./lang/index.ts";
+import type { Trait as TTrait, LooseInstanceType } from "./lang/index.ts";
 
 const __first_half = (() => {
 	return trait((b: any) => {

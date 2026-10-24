@@ -2,7 +2,7 @@ import { Clone, clone_of } from "./clone.ts";
 import { is_eq, PartialEq } from "./cmp.ts";
 import { Debug, FMT } from "./fmt.ts";
 import { Option } from "./option.ts";
-import { impl, type TraitInstance } from "./primitive/index.ts";
+import { impl, type TraitInstance } from "./lang/index.ts";
 
 export const HIDDEN_RESULT_TAG = "rust-ts::std::Result<T, E>";
 

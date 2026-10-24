@@ -11,7 +11,7 @@ import { INTERNAL_SEMAPHORE_CONTROLLER, Semaphore } from "./semaphore.ts";
 import { SharedJsonBuffer } from "../thread/shared_json_buffer.ts";
 import { Option } from "../option.ts";
 import { match, P } from "../match_impl.ts";
-import { impl } from "../primitive/index.ts";
+import { impl } from "../lang/index.ts";
 import { Clone } from "../clone.ts";
 import { Debug, FMT } from "../fmt.ts";
 

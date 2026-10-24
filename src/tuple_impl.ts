@@ -1,7 +1,7 @@
 import { Clone, clone_of } from "./clone.ts";
 import { is_eq, PartialEq } from "./cmp.ts";
 import { Debug, FMT, type FmtOptions } from "./fmt.ts";
-import { impl } from "./primitive/index.ts";
+import { impl } from "./lang/index.ts";
 
 const INDEX = /^(0|[1-9]\d*)$/;
 

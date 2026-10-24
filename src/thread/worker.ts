@@ -6,7 +6,7 @@ import "./index.ts"; // Registers spawn/move hydrators
 import { type BunMessageEvent } from "bun";
 import { HIDDEN_RESULT_TAG } from "../result.ts";
 import { patch_dynamic_imports } from "../../lib/patch_dynamic_import.ts";
-import { type WorkerPayload } from "./types";
+import type { WorkerPayload } from "./types";
 import { deserialize } from "./serializable.ts";
 
 globalThis.addEventListener(

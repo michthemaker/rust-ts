@@ -4,7 +4,7 @@ import { PartialEq } from "./cmp.ts";
 import { Debug, FMT } from "./fmt.ts";
 import { match } from "./match_impl.ts";
 import { Result } from "./result.ts";
-import { impl, type TraitInstance } from "./primitive/index.ts";
+import { impl, type TraitInstance } from "./lang/index.ts";
 
 export type Int<K extends string> = number & { readonly __num?: K };
 export type UInt<K extends string> = number & { readonly __num?: K };
