@@ -1,7 +1,7 @@
 import "../result.ts"; // Registers Result type
 import "../option.ts"; // Just utilities, no hydration needed
-import "../sync/mpsc_channel.ts"; // Registers Sender/Receiver hydrators
-import "../sync/mpmc_channel.ts"; // Registers Sender/Receiver hydrators
+import "../sync/mpsc.ts"; // Registers Sender/Receiver hydrators
+import "../sync/mpmc.ts"; // Registers Sender/Receiver hydrators
 import "./threads.ts"; // Registers spawn/move hydrators
 import { type BunMessageEvent } from "bun";
 import { HIDDEN_RESULT_TAG } from "../result.ts";
