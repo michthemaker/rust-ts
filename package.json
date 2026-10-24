@@ -1,23 +1,40 @@
 {
 	"name": "rust-ts",
 	"version": "1.0.0",
-	"dependencies": {
-		"oxfmt": "^0.74.0",
-		"oxlint": "^1.89.0",
-		"oxlint-tsgolint": "^7.0.2005"
+	"private": true,
+	"description": "TypeScript port of some of Rust's most useful patterns and ergonomics.",
+	"keywords": [
+		"Zero-Dependency",
+		"ergonomics",
+		"lightweight",
+		"rust",
+		"rust-library",
+		"type-safe",
+		"typescript"
+	],
+	"homepage": "https://github.com/michthemaker/rust-ts",
+	"bugs": {
+		"url": "https://github.com/michthemaker/rust-ts/issues",
+		"email": "michthebrand@gmail.com"
 	},
-	"devDependencies": {
-		"@types/bun": "latest",
-		"typescript": "7.0.2"
+	"license": "MIT",
+	"author": "Michthebrand <michthebrand@gmail.com>",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/michthemaker/rust-ts.git",
+		"directory": "."
 	},
-	"description": "",
 	"files": [
 		"./src"
 	],
-	"private": true,
-	"scripts": {
-		"build": "tsup",
-		"test": "echo \"Error: no test specified\" && exit 1"
-	},
-	"type": "module"
+	"type": "module",
+	"scripts": {},
+	"dependencies": {},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"oxfmt": "^0.74.0",
+		"oxlint": "^1.89.0",
+		"oxlint-tsgolint": "^7.0.2005",
+		"typescript": "7.0.2"
+	}
 }
