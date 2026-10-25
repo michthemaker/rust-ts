@@ -29,7 +29,6 @@ globalThis.addEventListener(
 			// assign the rust_ts module
 			// @ts-ignore
 			globalThis.rust_ts = rust_ts_module;
-			console.log(activeArgs);
 			const func = mod.default as Function;
 			const result = await (async () => {
 				return func(...activeArgs);
