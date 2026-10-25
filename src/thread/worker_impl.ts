@@ -8,6 +8,7 @@ import { HIDDEN_RESULT_TAG } from "../result.ts";
 import { patch_dynamic_imports } from "../../lib/patch_dynamic_import.ts";
 import type { WorkerPayload } from "./types";
 import { deserialize } from "./serializable.ts";
+import * as rust_ts_module from "../prelude.ts";
 
 globalThis.addEventListener(
 	"message",
@@ -25,6 +26,10 @@ globalThis.addEventListener(
 			const base_64_code = btoa(code);
 			const data_url = `data:text/javascript;base64,${base_64_code}`;
 			const mod = await import(data_url);
+			// assign the rust_ts module
+			// @ts-ignore
+			globalThis.rust_ts = rust_ts_module;
+			console.log(activeArgs);
 			const func = mod.default as Function;
 			const result = await (async () => {
 				return func(...activeArgs);

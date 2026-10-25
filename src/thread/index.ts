@@ -4,6 +4,7 @@ import { type WorkerPayload } from "./types.ts";
 import { serialize } from "./serializable.ts";
 import { Transferable } from "./transferable.ts";
 import { get_caller_location } from "../../lib/get_caller_location.ts";
+import type * as rust_ts_module from "../prelude.ts";
 
 type Result<T> = Core_Result<T, unknown>;
 
@@ -118,6 +119,16 @@ export function drop<T extends Disposable>(resource: T) {
 
 declare global {
 	var move: <Args extends any[]>(...args: Args) => MovedData<Args>;
+	/**
+	 * not available on the main thread. only available on spawned threads
+	 * @example
+	 * ``typescript
+	 * threads.spawn(async () => {
+	 *	const { Vec, vec, FixedArray, macro: { println } } = rust_ts
+	 * })
+	 * ``
+	 */
+	var rust_ts: typeof rust_ts_module;
 }
 
 globalThis.move = globalThis.move || move;
