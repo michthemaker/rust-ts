@@ -113,10 +113,6 @@ export function move<Args extends any[]>(...args: Args): MovedData<Args> {
 	}) as MovedData<Args>;
 }
 
-export function drop<T extends Disposable>(resource: T) {
-	resource[Symbol.dispose]();
-}
-
 declare global {
 	var move: <Args extends any[]>(...args: Args) => MovedData<Args>;
 	/**
