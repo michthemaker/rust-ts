@@ -1,9 +1,9 @@
 import { clone_of } from "./clone.ts";
 import { FMT } from "./fmt.ts";
-import { Drop } from "./ops.ts";
+import { AsyncDrop, Drop } from "./ops.ts";
 import { range } from "./range.ts";
 import { Slice } from "./slice_impl.ts";
-import { impl } from "./trait_impl.ts";
+import { impl, impls } from "./trait_impl.ts";
 import { Vec, vec } from "./vec.ts";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295;
@@ -13,25 +13,58 @@ function panic(msg: string): never {
 	throw new Error(msg);
 }
 
-export class FixedArray<T, N extends number> extends impl(Drop, Slice)<T> {
+export class FixedArray<T, N extends number> extends impl(Drop, AsyncDrop, Slice)<T> {
 	[FMT](_depth: number, options: any, inspect: Function) {
 		const formatted_elements = this.buf.map((item) => inspect(item, options));
-
 		return `FixedArray(${this._len})[${formatted_elements.join(", ")}]`;
 	}
 
-	[Symbol.dispose]() {}
+	[Symbol.dispose]!: () => void;
+	[Symbol.asyncDispose]!: () => Promise<void>;
 
 	constructor(initial_value: T, size: N) {
 		if (size > MAX_ARRAY_LENGTH || size < 0)
 			throw new Error(
 				`Requested allocation on FixedArray<T, N> exceeds engine memory limits.\nMaximum FixedArray<T, N> length is ${MAX_ARRAY_LENGTH} `
 			);
-		super(new Array(size).fill(initial_value), 0, size);
+		const arr = new Array(size);
+		for (let i = 0; i < size; i++) {
+			arr[i] = clone_of(initial_value);
+		}
+		super(arr, 0, size);
 		const this_value = this;
+		let dropped = false;
+		this[Symbol.dispose] = () => {
+			if (dropped) panic(`use of dropped value: FixedArray<T, N>`);
+			dropped = true;
+			for (let i = 0; i < this._len; i++) {
+				const item = this.buf[this.start + i];
+				if (impls(item, Drop)) {
+					item[Symbol.dispose]();
+				} else if (impls(item, AsyncDrop)) {
+					panic("cannot synchronously drop an asynchronous resource. Use async_drop instead.");
+				}
+			}
+			this.buf.length = 0;
+		};
+		this[Symbol.asyncDispose] = async () => {
+			if (dropped) panic(`use of dropped value: FixedArray<T, N>`);
+			dropped = true;
+			for (let i = 0; i < this._len; i++) {
+				const item = this.buf[this.start + i];
+				if (impls(item, AsyncDrop)) {
+					await item[Symbol.asyncDispose]();
+				} else if (impls(item, Drop)) item[Symbol.dispose]();
+			}
+			this.buf.length = 0;
+			return undefined;
+		};
 
 		return new Proxy(this_value, {
 			get(target, prop) {
+				if ([Symbol.asyncDispose, Symbol.dispose].includes(prop as any) && dropped)
+					panic(`cannot drop a dropped value: FixedArray<T, N>`);
+				if (dropped) panic(`use of dropped value: FixedArray<T, N>`);
 				if (typeof prop === "string" && INDEX.test(prop)) {
 					const index = Number(prop);
 					if (index >= target._len)
@@ -42,6 +75,9 @@ export class FixedArray<T, N extends number> extends impl(Drop, Slice)<T> {
 				return typeof value === "function" ? (value as Function).bind(target) : value;
 			},
 			set(target, prop, value): boolean {
+				if ([Symbol.asyncDispose, Symbol.dispose].includes(prop as any) && dropped)
+					panic(`cannot drop a dropped value: FixedArray<T, N>`);
+				if (dropped) panic(`use of dropped value: FixedArray<T, N>`);
 				if (typeof prop === "string" && INDEX.test(prop)) {
 					const index = Number(prop);
 					if (index >= target._len)
@@ -50,6 +86,9 @@ export class FixedArray<T, N extends number> extends impl(Drop, Slice)<T> {
 					return true;
 				}
 				return Reflect.set(target, prop, value);
+			},
+			deleteProperty() {
+				return false;
 			}
 		}) as any;
 	}

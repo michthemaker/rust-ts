@@ -11,10 +11,8 @@ const __first_half = (() => {
 					`required static default method not implemented on ${this.name} that implements Default trait`
 				);
 			}
-			// @ts-ignore
-			// oxlint-disable-next-line no-unused-vars
 			protected constructor(...args: any[]) {
-				super();
+				super(...args);
 			}
 		}
 		return Default;

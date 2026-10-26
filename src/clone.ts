@@ -26,10 +26,8 @@ export const Clone = <T>() =>
 	trait((b) => {
 		abstract class Clone extends b {
 			abstract clone(): T;
-			// @ts-ignore
-			// oxlint-disable-next-line no-unused-vars
 			protected constructor(...args: any[]) {
-				super();
+				super(...args);
 			}
 		}
 		return Clone;

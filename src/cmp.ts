@@ -5,10 +5,8 @@ export const PartialEq = <T>() =>
 		abstract class PartialEq extends b {
 			abstract eq(other: T): boolean;
 			abstract ne(other: T): boolean;
-			// @ts-ignore
-			// oxlint-disable-next-line no-unused-vars
 			protected constructor(...args: any[]) {
-				super();
+				super(...args);
 			}
 		}
 		return PartialEq;

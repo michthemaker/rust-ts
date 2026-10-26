@@ -7,10 +7,8 @@ export const Debug = trait((b) => {
 			options: FmtOptions,
 			inspect: (arg: any, options: FmtOptions) => string
 		): string;
-		// @ts-ignore
-		// oxlint-disable-next-line no-unused-vars
 		protected constructor(...args: any[]) {
-			super();
+			super(...args);
 		}
 	}
 	return Debug;

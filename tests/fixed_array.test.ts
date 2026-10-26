@@ -1,6 +1,11 @@
 import { FixedArray } from "../src/array.ts";
 import { describe, test, expect } from "bun:test";
 import { match, P } from "../src/match_impl.ts";
+import { OnceLock } from "../src/sync/once_lock.ts";
+import { drop } from "../src/mem.ts";
+import { impl } from "../src/trait_impl.ts";
+import { AsyncDrop, Drop } from "../src/ops.ts";
+import { noop } from "../lib/noop.ts";
 
 describe("FixedArray<T, N>", () => {
 	test("can be indexed like arrays", () => {
@@ -62,5 +67,35 @@ describe("FixedArray<T, N>", () => {
 			console.log(nums[8]);
 		}
 		expect(throws).toThrow();
+	});
+	describe("Drop and AsyncDrop", () => {
+		test("Double drop throws", () => {
+			const mine = FixedArray(FixedArray({}, 6), 8);
+			// console.log(mine);
+			drop(mine);
+			expect(() => drop(mine)).toThrow(/cannot drop a dropped/i);
+		});
+		test("use-after-drop throws", () => {
+			new OnceLock();
+
+			// @ts-expect-error
+			class Mine extends impl(AsyncDrop) {}
+			// @ts-expect-error
+			class Us extends impl(Drop) {}
+			const meandyou = FixedArray(new Mine(), 0);
+			const us_e = FixedArray.from_fn(3, (index) => {
+				if (index === 2) return new Us();
+				else return new Mine();
+			});
+			const mine = new FixedArray(meandyou, 8);
+			drop(mine);
+			noop(us_e);
+
+			expect(() => mine[0]).toThrow();
+			// @ts-expect-error
+			expect(() => (mine[0] = 3)).toThrow();
+			// @ts-expect-error
+			expect(() => delete mine[0]).toThrow();
+		});
 	});
 });
