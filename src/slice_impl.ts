@@ -6,9 +6,7 @@ import { type Range } from "./range.ts";
 import { impl } from "./trait_impl.ts";
 import { Debug, FMT } from "./fmt.ts";
 import { Clone, clone_of } from "./clone.ts";
-import { Default } from "./default.ts";
 
-const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 const INDEX = /^(0|[1-9]\d*)$/;
 
 function panic(msg: string): never {
@@ -60,7 +58,7 @@ function as_array<T>(src: Source<T>): readonly T[] {
  * Never copies on construction. Sub-slices share `buf`, so mutation through
  * one view is visible in the owner (and in every overlapping view).
  */
-export abstract class Slice<T> extends impl(Clone, Default, PartialEq<Source<any>>, Debug) {
+export abstract class Slice<T> extends impl(Clone, PartialEq<Source<any>>, Debug) {
 	protected buf: T[];
 	protected start: number;
 	protected _len: number;
@@ -86,7 +84,7 @@ export abstract class Slice<T> extends impl(Clone, Default, PartialEq<Source<any
 
 		return new Proxy(this, {
 			get(target, prop) {
-				if (prop !== DEBUG) target.guard?.();
+				if (prop !== FMT) target.guard?.();
 				if (typeof prop === "string" && INDEX.test(prop)) {
 					const index = Number(prop);
 					if (index >= target._len)

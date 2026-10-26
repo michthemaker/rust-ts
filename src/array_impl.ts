@@ -1,7 +1,9 @@
 import { clone_of } from "./clone.ts";
 import { FMT } from "./fmt.ts";
+import { Drop } from "./ops.ts";
 import { range } from "./range.ts";
 import { Slice } from "./slice_impl.ts";
+import { impl } from "./trait_impl.ts";
 import { Vec, vec } from "./vec.ts";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295;
@@ -11,12 +13,14 @@ function panic(msg: string): never {
 	throw new Error(msg);
 }
 
-export class FixedArray<T, N extends number> extends Slice<T> {
+export class FixedArray<T, N extends number> extends impl(Drop, Slice)<T> {
 	[FMT](_depth: number, options: any, inspect: Function) {
 		const formatted_elements = this.buf.map((item) => inspect(item, options));
 
 		return `FixedArray(${this._len})[${formatted_elements.join(", ")}]`;
 	}
+
+	[Symbol.dispose]() {}
 
 	constructor(initial_value: T, size: N) {
 		if (size > MAX_ARRAY_LENGTH || size < 0)
@@ -95,13 +99,6 @@ export class FixedArray<T, N extends number> extends Slice<T> {
 			copy[i] = clone_of(item);
 		}
 		return copy;
-	}
-
-	/**
-	 * Do not call this. FixedArray doesn't implement Default trait
-	 */
-	static default(): any {
-		throw new Error(`FixedArray doesn't implement Default trait`);
 	}
 }
 

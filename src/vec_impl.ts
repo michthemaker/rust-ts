@@ -7,12 +7,14 @@ import { register_vec_factory, resolve_range, Slice } from "./slice_impl.ts";
 import { type Range } from "./range.ts";
 import { FMT } from "./fmt.ts";
 import { clone_of } from "./clone.ts";
+import { impl } from "./trait_impl.ts";
+import { Default } from "./default.ts";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295; // 2^32 - 1
 
 const INDEX = /^(0|[1-9]\d*)$/;
 
-export class Vec<T> extends Slice<T> {
+export class Vec<T> extends impl(Default, Slice)<T> {
 	private _capacity: number;
 	/** bumped by every structural change; views created from this Vec check it */
 	private _version = 0;
@@ -95,6 +97,14 @@ export class Vec<T> extends Slice<T> {
 			v._len = n;
 		}
 		return v;
+	}
+
+	public static default<T>(): Vec<T> {
+		return new Vec<T>(0) as Vec<T>;
+	}
+
+	public static from_iter<T>(items: Iterable<T>): Vec<T> {
+		return Vec.from([...items]);
 	}
 
 	public to_array() {
@@ -428,10 +438,6 @@ export class Vec<T> extends Slice<T> {
 		return items;
 	}
 
-	public static from_iter<T>(items: Iterable<T>): Vec<T> {
-		return Vec.from([...items]);
-	}
-
 	public len() {
 		return this._len;
 	}
@@ -506,10 +512,6 @@ export class Vec<T> extends Slice<T> {
 			copy[i] = clone_of(item);
 		}
 		return copy;
-	}
-
-	static override default<T>(): Vec<T> {
-		return new Vec<T>(0) as Vec<T>;
 	}
 }
 

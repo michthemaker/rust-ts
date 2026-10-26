@@ -17,8 +17,6 @@ interface FixedArrayConstructor {
 	new <T, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
 	<T, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
 	from_fn<T, N extends number>(N: N, f: (index: number) => T): FixedArray<T, N>;
-	/** FixedArray doesn't implement Default trait */
-	default(): never;
 }
 
 function FixedArrayImpl(this: any, initial_value: any, size: number) {
@@ -33,7 +31,6 @@ function FixedArrayImpl(this: any, initial_value: any, size: number) {
 
 // Copy statics from the real class
 FixedArrayImpl.from_fn = Impl.from_fn.bind(Impl);
-FixedArrayImpl.default = Impl.default.bind(Impl);
 
 // Make `instanceof FixedArray` work
 Object.defineProperty(FixedArrayImpl, Symbol.hasInstance, {
@@ -53,18 +50,6 @@ declare module "./match_impl.ts" {
 	}
 	interface PatternInterface {
 		FixedArray<T>(expected: T[]): Pat<"rust-ts::std::FixedArray<T, N>">;
-	}
-}
-
-declare module "./default.ts" {
-	interface DefaultCall {
-		/**
-		 * FixedArray doesn't implement Default Trait
-		 * @note Calling `Default.default(FixedArray<any, 0>)` will throw
-		 */
-		default<T extends typeof FixedArray<any, any>>(
-			type: T extends typeof FixedArray<any, any> ? `FixedArray doesnt implement Default trait` : T
-		): never;
 	}
 }
 
