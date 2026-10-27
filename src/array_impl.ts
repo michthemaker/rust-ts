@@ -1,3 +1,4 @@
+import { is_iterable } from "../lib/iterable.ts";
 import { clone_of } from "./clone.ts";
 import { FMT } from "./fmt.ts";
 import { AsyncDrop, Drop } from "./ops.ts";
@@ -34,37 +35,71 @@ export class FixedArray<T, N extends number> extends impl(Drop, AsyncDrop, Slice
 		super(arr, 0, size);
 		const this_value = this;
 		let dropped = false;
+
+		const is_dispose = (p: PropertyKey) => p === Symbol.dispose || p === Symbol.asyncDispose;
+		// keys that tooling touches implicitly; everything else string-keyed panics after drop
+		const ALLOWED_AFTER_DROP = new Set<PropertyKey>(["constructor", "then"]);
+
+		const finish = (errors: unknown[]) => {
+			if (errors.length === 1) throw errors[0];
+			if (errors.length > 1)
+				throw new AggregateError(errors, "multiple errors while dropping FixedArray<T, N>");
+		};
+
 		this[Symbol.dispose] = () => {
 			if (dropped) panic(`use of dropped value: FixedArray<T, N>`);
-			dropped = true;
+
+			// pass 1: validate only, nothing is mutated if this panics.
+			// mirrors mem.drop: an AsyncDrop item is only OK if it is iterable AND also Drop
 			for (let i = 0; i < this._len; i++) {
 				const item = this.buf[this.start + i];
-				if (impls(item, Drop)) {
-					item[Symbol.dispose]();
-				} else if (impls(item, AsyncDrop)) {
+				if (impls(item, AsyncDrop) && !(is_iterable(item) && impls(item, Drop))) {
 					panic("cannot synchronously drop an asynchronous resource. Use async_drop instead.");
 				}
 			}
-			this.buf.length = 0;
-		};
-		this[Symbol.asyncDispose] = async () => {
-			if (dropped) panic(`use of dropped value: FixedArray<T, N>`);
+
 			dropped = true;
+
+			// pass 2: drop in order, keep going past failures
+			const errors: unknown[] = [];
 			for (let i = 0; i < this._len; i++) {
 				const item = this.buf[this.start + i];
-				if (impls(item, AsyncDrop)) {
-					await item[Symbol.asyncDispose]();
-				} else if (impls(item, Drop)) item[Symbol.dispose]();
+				try {
+					if (impls(item, Drop)) item[Symbol.dispose]();
+				} catch (e) {
+					errors.push(e);
+				}
 			}
 			this.buf.length = 0;
-			return undefined;
+			finish(errors);
+		};
+
+		this[Symbol.asyncDispose] = async () => {
+			if (dropped) panic(`use of dropped value: FixedArray<T, N>`);
+			dropped = true; // set before awaiting so concurrent use panics too
+
+			const errors: unknown[] = [];
+			for (let i = 0; i < this._len; i++) {
+				const item = this.buf[this.start + i];
+				try {
+					if (impls(item, AsyncDrop)) await item[Symbol.asyncDispose]();
+					else if (impls(item, Drop)) item[Symbol.dispose]();
+				} catch (e) {
+					errors.push(e);
+				}
+			}
+			this.buf.length = 0;
+			finish(errors);
 		};
 
 		return new Proxy(this_value, {
 			get(target, prop) {
-				if ([Symbol.asyncDispose, Symbol.dispose].includes(prop as any) && dropped)
-					panic(`cannot drop a dropped value: FixedArray<T, N>`);
-				if (dropped) panic(`use of dropped value: FixedArray<T, N>`);
+				if (dropped) {
+					if (is_dispose(prop)) panic(`cannot drop a dropped value: FixedArray<T, N>`);
+					if (typeof prop === "string" && !ALLOWED_AFTER_DROP.has(prop))
+						panic(`use of dropped value: FixedArray<T, N>`);
+					// other symbols (inspect, toPrimitive, iterator probes...) fall through
+				}
 				if (typeof prop === "string" && INDEX.test(prop)) {
 					const index = Number(prop);
 					if (index >= target._len)
@@ -72,12 +107,14 @@ export class FixedArray<T, N extends number> extends impl(Drop, AsyncDrop, Slice
 					return target.buf[target.start + index];
 				}
 				const value = Reflect.get(target, prop);
+				// arrow-function dispose methods ignore bind; harmless for them
 				return typeof value === "function" ? (value as Function).bind(target) : value;
 			},
 			set(target, prop, value): boolean {
-				if ([Symbol.asyncDispose, Symbol.dispose].includes(prop as any) && dropped)
-					panic(`cannot drop a dropped value: FixedArray<T, N>`);
-				if (dropped) panic(`use of dropped value: FixedArray<T, N>`);
+				if (dropped) {
+					if (is_dispose(prop)) panic(`cannot drop a dropped value: FixedArray<T, N>`);
+					if (typeof prop === "string") panic(`use of dropped value: FixedArray<T, N>`);
+				}
 				if (typeof prop === "string" && INDEX.test(prop)) {
 					const index = Number(prop);
 					if (index >= target._len)

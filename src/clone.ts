@@ -10,10 +10,11 @@ export function clone_of<T>(x: T): T {
 	if (Object.getPrototypeOf(x) === Object.prototype)
 		// plain object only
 		return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, clone_of(v)])) as T;
-	// return x; // other class instances: shared, like Rc
-	throw new Error(
-		`the trait bound \`${(x as any).constructor?.name ?? "object"}: Clone\` is not satisfied`
-	);
+	// let's give other user classes a chance.
+	return derive_clone(x);
+	// throw new Error(
+	// 	`the trait bound \`${(x as any).constructor?.name ?? "object"}: Clone\` is not satisfied`
+	// );
 }
 
 export function derive_clone<T extends object>(self: T): T {

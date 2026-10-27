@@ -33,9 +33,9 @@ function vec(arg1?: any, arg2?: any) {
 		return Vec.from_elem(arg1, arg2);
 	} else if (arg1)
 		// @ts-ignore
-		return Vec.from(arg1);
+		return Vec.from_iter(arg1);
 	// @ts-ignore
-	else return Vec.from([]);
+	else return Vec.from_iter([]);
 }
 
 declare module "./match_impl.ts" {

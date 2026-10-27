@@ -3,6 +3,9 @@ import { vec, Vec } from "../src/vec.ts";
 import { OnceLock } from "../src/sync/once_lock.ts";
 import { range } from "../src/range.ts";
 import { inspect } from "bun";
+import { drop } from "../src/mem.ts";
+import { AsyncDrop, Drop } from "../src/ops.ts";
+import { impl } from "../src/trait_impl.ts";
 
 describe("Vec<T>", () => {
 	test("can be indexed like arrays", () => {
@@ -148,5 +151,29 @@ describe("Vec<T>", () => {
 		my_nums.shrink_to_fit();
 		console.log(my_nums, "capacity: ", my_nums.capacity());
 		expect(my_nums.capacity()).toBe(2);
+	});
+
+	describe("AsyncDrop and Drop traits", () => {
+		test("Double drop throws", () => {
+			const mine = Vec.from_elem(29, 9);
+			// console.log(mine);
+			drop(mine);
+			expect(() => drop(mine)).toThrow(/cannot drop a dropped/i);
+		});
+		test("use-after-drop throws", () => {
+			// @ts-expect-error
+			class Mine extends impl(AsyncDrop) {}
+			// @ts-expect-error
+			class Us extends impl(Drop) {}
+			const meandyou = vec(0, 3);
+
+			const mine = vec(meandyou, 8);
+			drop(mine);
+
+			expect(() => mine[0]).toThrow();
+			// @ts-expect-error
+			expect(() => (mine[0] = 3)).toThrow();
+			expect(() => delete mine[0]).toThrow();
+		});
 	});
 });

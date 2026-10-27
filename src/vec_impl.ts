@@ -7,19 +7,25 @@ import { register_vec_factory, resolve_range, Slice } from "./slice_impl.ts";
 import { type Range } from "./range.ts";
 import { FMT } from "./fmt.ts";
 import { clone_of } from "./clone.ts";
-import { impl } from "./trait_impl.ts";
+import { impl, impls } from "./trait_impl.ts";
 import { Default } from "./default.ts";
+import { AsyncDrop, Drop } from "./ops.ts";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295; // 2^32 - 1
-
+function panic(msg: string): never {
+	throw new Error(msg);
+}
 const INDEX = /^(0|[1-9]\d*)$/;
 
-export class Vec<T> extends impl(Default, Slice)<T> {
+export class Vec<T> extends impl(Default, AsyncDrop, Drop, Slice)<T> {
 	private _capacity: number;
 	/** bumped by every structural change; views created from this Vec check it */
 	private _version = 0;
 	/** the Vec as the caller sees it (the index proxy), for methods that hand `self` back */
 	private outer!: Vec<T>;
+
+	[Symbol.dispose]!: () => void;
+	[Symbol.asyncDispose]!: () => Promise<void>;
 
 	[FMT](_depth: number, options: any, inspect: Function) {
 		const first_half = this.buf.slice(0, this._len);
@@ -45,9 +51,39 @@ export class Vec<T> extends impl(Default, Slice)<T> {
 		super(buf, 0, array ? array.length : 0);
 		this._capacity = capacity;
 		const this_value = this;
+		let dropped = false;
+		this[Symbol.dispose] = () => {
+			if (dropped) panic(`use of dropped value: Vec<T>`);
+			dropped = true;
+			for (let i = 0; i < this._len; i++) {
+				const item = this.buf[this.start + i];
+				if (impls(item, Drop)) {
+					item[Symbol.dispose]();
+				} else if (impls(item, AsyncDrop)) {
+					panic("cannot synchronously drop an asynchronous resource. Use async_drop instead.");
+				}
+			}
+			this.buf.length = 0;
+			console.log(this);
+		};
+		this[Symbol.asyncDispose] = async () => {
+			if (dropped) panic(`use of dropped value: Vec<T>`);
+			dropped = true;
+			for (let i = 0; i < this._len; i++) {
+				const item = this.buf[this.start + i];
+				if (impls(item, AsyncDrop)) {
+					await item[Symbol.asyncDispose]();
+				} else if (impls(item, Drop)) item[Symbol.dispose]();
+			}
+			this.buf.length = 0;
+			return undefined;
+		};
 
 		const proxy = new Proxy(this_value, {
 			get(target, prop) {
+				if ([Symbol.asyncDispose, Symbol.dispose].includes(prop as any) && dropped)
+					panic(`cannot drop a dropped value: Vec<T>`);
+				if (dropped) panic(`use of dropped value: Vec<T>`);
 				if (typeof prop === "string" && INDEX.test(prop)) {
 					const index = Number(prop);
 					if (!Number.isNaN(index) && Number.isInteger(index)) {
@@ -62,6 +98,9 @@ export class Vec<T> extends impl(Default, Slice)<T> {
 				return typeof value === "function" ? (value as Function).bind(target) : value;
 			},
 			set(target, prop, value): boolean {
+				if ([Symbol.asyncDispose, Symbol.dispose].includes(prop as any) && dropped)
+					panic(`cannot drop a dropped value: Vec<T>`);
+				if (dropped) panic(`use of dropped value: Vec<T>`);
 				if (typeof prop === "string" && INDEX.test(prop)) {
 					// performs an update or insert
 					const index = Number(prop);
@@ -70,14 +109,16 @@ export class Vec<T> extends impl(Default, Slice)<T> {
 					return true;
 				}
 				return Reflect.set(target, prop, value);
+			},
+			deleteProperty() {
+				panic(
+					"Cannot delete property on Vec<T> \n tip: if you want to delete an index, use `.remove()`"
+				);
+				return false;
 			}
 		}) as any; // Cast to pretend it is a raw tuple alongside our class helper
 		this_value.outer = proxy;
 		return proxy;
-	}
-
-	public static from<T>(array: Array<T>) {
-		return new this<T>(array.length, array);
 	}
 
 	public static with_capacity<T>(capacity: number) {
@@ -104,7 +145,8 @@ export class Vec<T> extends impl(Default, Slice)<T> {
 	}
 
 	public static from_iter<T>(items: Iterable<T>): Vec<T> {
-		return Vec.from([...items]);
+		const array = Array.from(items);
+		return new this<T>(array.length, array);
 	}
 
 	public to_array() {
@@ -254,7 +296,7 @@ export class Vec<T> extends impl(Default, Slice)<T> {
 	public split_off(at: number): Vec<T> {
 		if (!Number.isInteger(at) || at < 0 || at > this._len)
 			throw new Error(`\`at\` split index (is ${at}) should be <= len (is ${this._len})`);
-		const tail = Vec.from(this.buf.slice(at, this._len));
+		const tail = Vec.from_iter(this.buf.slice(at, this._len));
 		if (at < this._len) this._version++;
 		this._len = at;
 		this.drop_tail();
@@ -515,4 +557,4 @@ export class Vec<T> extends impl(Default, Slice)<T> {
 	}
 }
 
-register_vec_factory((items) => Vec.from(items));
+register_vec_factory((items) => Vec.from_iter(items));

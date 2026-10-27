@@ -465,6 +465,22 @@ function is_strict_class(value: any) {
 }
 
 /**
+ * type guard for checking whether class instance or class itself
+ * implements a trait
+ *
+ * @example
+ * ``typescript
+ * type Check = Impls<typeof Slice<any>, typeof Debug>
+ * // hover on Check shows true
+ * const my_vec = Vec.with_capacity(0);
+ * type Check = Impls<typeof my_vec, typeof Debug>
+ * // hover on Check shows true
+ * ``
+ */
+export type Impls<T, U extends SubTrait | TypeFactory<SubTrait>> =
+	T extends TraitInstance<U> ? true : T extends TraitConstructor<U> ? true : false;
+
+/**
  * type guard for checking whether class instance or class itself implements a trait
  *
  * @example

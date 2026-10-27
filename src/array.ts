@@ -4,7 +4,6 @@ import { Option } from "./option.ts";
 import { FixedArray as Impl } from "./array_impl.ts";
 import type { TraitInstance } from "./trait_impl.ts";
 import type { AsyncDrop, Drop } from "./ops.ts";
-import type { Slice } from "./slice_impl.ts";
 
 type TupleToIndices<Tuple extends any[]> = {
 	[Index in Extract<keyof Tuple, `${number}`>]: Tuple[Index];
@@ -56,10 +55,12 @@ interface FixedArrayConstructor {
 	 */
 	<T extends unknown, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
 	/**
-	 * Creates a fixed array of elements that extends Slice class and AsyncDrop and Drop traits
+	 * Creates a fixed array of elements that extends Iterable and AsyncDrop and Drop traits
 	 */
 	from_fn<
-		T extends TraitInstance<typeof AsyncDrop> & TraitInstance<typeof Drop> & Slice<any>,
+		T extends TraitInstance<typeof AsyncDrop> &
+			TraitInstance<typeof Drop> &
+			Iterable<any, any, any>,
 		N extends number
 	>(
 		N: N,
