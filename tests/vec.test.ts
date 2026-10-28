@@ -1,4 +1,4 @@
-import { expect, test, describe, xtest } from "bun:test";
+import { expect, test, describe } from "bun:test";
 import { vec, Vec } from "../src/vec.ts";
 import { OnceLock } from "../src/sync/once_lock.ts";
 import { range } from "../src/range.ts";
@@ -236,6 +236,17 @@ describe("Vec<T>", () => {
 
 			expect(() => drop(arr2)).toThrowError(AggregateError);
 			console.log(arr2);
+		});
+		test("slice of view invalidated after dropped owner", () => {
+			class MyClass extends impl(Drop) {
+				[Symbol.dispose]() {}
+			}
+			const our_vec = vec(new MyClass(), 5);
+			const sliced = our_vec.as_slice(),
+				sliced_2 = sliced.slice(range(0, 2));
+			console.log(our_vec, sliced, sliced_2);
+			drop(our_vec);
+			console.log(our_vec, sliced, sliced_2);
 		});
 	});
 });

@@ -4,7 +4,6 @@ import { match, P } from "../src/match_impl.ts";
 import { async_drop, drop } from "../src/mem.ts";
 import { AsyncDrop, Drop } from "../src/ops.ts";
 import { impl } from "../src/trait_impl.ts";
-import { range } from "../src/range.ts";
 
 describe("FixedArray<T, N>", () => {
 	test("can be indexed like arrays", () => {

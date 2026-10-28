@@ -89,6 +89,7 @@ export class Vec<T> extends impl(Default, AsyncDrop, Drop, Slice)<T> {
 				}
 			}
 			this.buf.length = 0;
+			this._version++;
 			finish(errors);
 		};
 		this[Symbol.asyncDispose] = async () => {
@@ -106,6 +107,7 @@ export class Vec<T> extends impl(Default, AsyncDrop, Drop, Slice)<T> {
 				}
 			}
 			this.buf.length = 0;
+			this._version++;
 			finish(errors);
 		};
 
