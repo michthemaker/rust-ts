@@ -11,6 +11,7 @@ import { impl, impls } from "./trait_impl.ts";
 import { Default } from "./default.ts";
 import { AsyncDrop, Drop } from "./ops.ts";
 import { is_iterable } from "../lib/iterable.ts";
+import type { CheckElem, Msg } from "../lib/types.ts";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295; // 2^32 - 1
 function panic(msg: string): never {
@@ -18,7 +19,7 @@ function panic(msg: string): never {
 }
 const INDEX = /^(0|[1-9]\d*)$/;
 
-export class Vec<T> extends impl(Default, AsyncDrop, Drop, Slice)<T> {
+export class Vec<T extends CheckElem<T> = never> extends impl(Default, AsyncDrop, Drop, Slice)<T> {
 	private _capacity: number;
 	/** bumped by every structural change; views created from this Vec check it */
 	private _version = 0;
@@ -157,16 +158,23 @@ export class Vec<T> extends impl(Default, AsyncDrop, Drop, Slice)<T> {
 		return proxy;
 	}
 
-	public static with_capacity<T>(capacity: number) {
+	public static with_capacity<T extends CheckElem<T> = never>(
+		capacity: number
+	): CheckElem<T> extends Msg<any> ? never : Vec<T> {
 		return new this<T>(capacity);
 	}
 
-	public static new<T>() {
+	public static new<T extends CheckElem<T> = never>(): CheckElem<T> extends Msg<any>
+		? never
+		: Vec<T> {
 		return new this<T>(0);
 	}
 
 	/** `vec![value; n]`: n elements, each a clone of `value` (the last one is `value` itself). */
-	public static from_elem<T>(value: T, n: number): Vec<T> {
+	public static from_elem<T extends CheckElem<T> = never>(
+		value: T,
+		n: number
+	): CheckElem<T> extends Msg<any> ? never : Vec<T> {
 		const v = new this<T>(n);
 		if (n > 0) {
 			for (let i = 0; i < n - 1; i++) v.buf[i] = clone_of(value);
@@ -176,11 +184,15 @@ export class Vec<T> extends impl(Default, AsyncDrop, Drop, Slice)<T> {
 		return v;
 	}
 
-	public static default<T>(): Vec<T> {
-		return new Vec<T>(0) as Vec<T>;
+	public static default<T extends CheckElem<T> = never>(): CheckElem<T> extends Msg<any>
+		? never
+		: Vec<T> {
+		return new Vec<T>(0) as CheckElem<T> extends Msg<any> ? never : Vec<T>;
 	}
 
-	public static from_iter<T>(items: Iterable<T>): Vec<T> {
+	public static from_iter<T extends CheckElem<T> = never>(
+		items: Iterable<T>
+	): CheckElem<T> extends Msg<any> ? never : Vec<T> {
 		const array = Array.from(items);
 		return new this<T>(array.length, array);
 	}

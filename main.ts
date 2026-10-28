@@ -16,17 +16,21 @@
 
 import { FixedArray } from "./src/array.ts";
 import { AsyncDrop, Drop } from "./src/ops.ts";
+import { Option } from "./src/option.ts";
 import { impl } from "./src/trait_impl.ts";
-import { Vec, vec } from "./src/vec.ts";
+import { vec } from "./src/vec.ts";
 
-class MyClass extends impl(AsyncDrop, Drop) {
+class MyClass extends impl(AsyncDrop) {
 	async [Symbol.asyncDispose]() {}
+}
+export class MyClass2 extends impl(Drop) {
 	[Symbol.dispose]() {}
 }
 
 // this should show never actually
-vec<MyClass>();
-vec<Vec<number>>();
+vec<string>(); // should be never
+vec<number>();
+vec([Option.Some(new MyClass()), Option.Some(new MyClass())]);
 
 const value = {};
 const arr = FixedArray(value, 1);

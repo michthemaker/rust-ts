@@ -2,10 +2,9 @@ import { Option } from "./option.ts";
 import { define_pattern, Pattern, type Pat } from "./match_impl.ts";
 import { is_eq } from "./cmp.ts";
 import { Vec as Impl } from "./vec_impl.ts";
-import type { TraitInstance } from "./trait_impl.ts";
-import type { AsyncDrop, Drop } from "./ops.ts";
+import type { CheckElem, Msg } from "../lib/types.ts";
 
-class Vec<T> extends Impl<T> {
+class Vec<T extends CheckElem<T> = never> extends Impl<T> {
 	constructor() {
 		// @ts-expect-error
 		super(...arguments);
@@ -16,87 +15,44 @@ interface Vec<T> extends Impl<T> {}
 
 declare module "./default.ts" {
 	interface DefaultCall {
-		default<T extends typeof Vec<any>>(type: T): T extends typeof Vec<infer U> ? Vec<U> : never;
+		default<T extends typeof Vec<any>>(
+			type: T
+		): T extends typeof Vec<infer U extends CheckElem<U>> ? Vec<U> : never;
 	}
 }
 
 /**
- * Creates a Vector of elements that extends Iterable type, AsyncDrop and Drop traits
+ * Creates an empty Vec.
  * @description `vec![]`
+ * @remarks Elements that implement both `AsyncDrop` and `Drop` must be Iterable (e.g. `Vec`,
+ * `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
+ * which path to take.
  */
-function vec<
-	T extends TraitInstance<typeof AsyncDrop> & TraitInstance<typeof Drop> & Iterable<any, any, any>
->(): Vec<T>;
-/**
- * Creates a Vector of items that implement AsyncDrop trait
- * @description `vec![]`
- */
-function vec<T extends TraitInstance<typeof AsyncDrop>>(): Vec<T>;
-/**
- * Creates a Vector of items that implement Drop trait
- * @description `vec![]`
- */
-function vec<T extends TraitInstance<typeof Drop>>(): Vec<T>;
-/**
- * Do not mix types in vectors
- */
-function vec<T extends TraitInstance<typeof Drop | typeof AsyncDrop>>(): [T] extends [
-	TraitInstance<typeof Drop | typeof AsyncDrop>
-]
-	? never
-	: Vec<T>;
-/** @description `vec![]` */
-function vec<T extends unknown>(): Vec<T>;
+function vec<T extends CheckElem<T> = never>(): CheckElem<T> extends Msg<any> ? never : Vec<T>;
 // vec![0, 0, 0]
 /**
- * Creates a Vector of elements that extends Iterable type, AsyncDrop and Drop traits
+ * Creates a Vec from an array
  * @description `vec![0, 0, 0]`
+ * @remarks Elements that implement both `AsyncDrop` and `Drop` must be Iterable (e.g. `Vec`,
+ * `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
+ * which path to take.
  */
-function vec<
-	T extends TraitInstance<typeof AsyncDrop> & TraitInstance<typeof Drop> & Iterable<any, any, any>
->(array: Array<T>): Vec<T>;
-/**
- * Creates a Vector of items that implement AsyncDrop trait
- * @description `vec![0, 0, 0]`
- */
-function vec<T extends TraitInstance<typeof AsyncDrop>>(array: Array<T>): Vec<T>;
-/**
- * Creates a Vector of items that implement Drop trait
- * @description `vec![0, 0, 0]`
- */
-function vec<T extends TraitInstance<typeof Drop>>(array: Array<T>): Vec<T>;
-/**
- * Do not mix types in vectors
- */
-function vec<T extends TraitInstance<typeof Drop | typeof AsyncDrop>>(array: Array<T>): never;
-/**
- * @description `vec![0, 0, 0]`
- */
-function vec<T extends unknown>(array: Array<T>): Vec<T>;
+function vec<T extends CheckElem<T>>(
+	array: Array<T>
+): CheckElem<T> extends Msg<any> ? never : Vec<T>;
+
 // vec![elem; n]
 /**
- * Creates a Vector of elements that extends Iterable type, AsyncDrop and Drop traits
- * @description `vec![elem; n]`: n elements, each a clone of `value` (the last one is `value` itself).
+ * Creates a Vec from an array
+ * @description `vec![0u8; 6]`
+ * @remarks Elements that implement both `AsyncDrop` and `Drop` must be Iterable (e.g. `Vec`,
+ * `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
+ * which path to take.
  */
-function vec<
-	T extends TraitInstance<typeof AsyncDrop> & TraitInstance<typeof Drop> & Iterable<any, any, any>
->(elem: T, n: number): Vec<T>;
-/**
- * Creates a Vector of items that implement AsyncDrop trait
- * @description `vec![elem; n]`: n elements, each a clone of `value` (the last one is `value` itself).
- */
-function vec<T extends TraitInstance<typeof AsyncDrop>>(elem: T, n: number): Vec<T>;
-/**
- * Creates a Vector of items that implement Drop trait
- * @description `vec![elem; n]`: n elements, each a clone of `value` (the last one is `value` itself).
- */
-function vec<T extends TraitInstance<typeof Drop>>(elem: T, n: number): Vec<T>;
-/**
- * Do not mix types in vectors
- */
-function vec<T extends TraitInstance<typeof Drop | typeof AsyncDrop>>(elem: T, n: number): never;
-/** @description `vec![elem; n]`: n elements, each a clone of `value` (the last one is `value` itself). */
-function vec<T extends unknown>(elem: T, n: number): Vec<T>;
+function vec<T extends CheckElem<T>>(
+	elem: T,
+	n: number
+): CheckElem<T> extends Msg<any> ? never : Vec<T>;
 
 function vec(arg1?: any, arg2?: any) {
 	if (arg2) {
