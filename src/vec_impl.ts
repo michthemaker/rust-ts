@@ -158,43 +158,38 @@ export class Vec<T extends CheckElem<T> = never> extends impl(Default, AsyncDrop
 		return proxy;
 	}
 
-	public static with_capacity<T extends CheckElem<T> = never>(
+	public static with_capacity<T extends CheckElem<T>>(
 		capacity: number
 	): CheckElem<T> extends Msg<any> ? never : Vec<T> {
 		return new this<T>(capacity);
 	}
 
-	public static new<T extends CheckElem<T> = never>(): CheckElem<T> extends Msg<any>
-		? never
-		: Vec<T> {
+	public static new<T extends CheckElem<T>>(): CheckElem<T> extends Msg<any> ? never : Vec<T> {
 		return new this<T>(0);
 	}
 
 	/** `vec![value; n]`: n elements, each a clone of `value` (the last one is `value` itself). */
-	public static from_elem<T extends CheckElem<T> = never>(
-		value: T,
-		n: number
-	): CheckElem<T> extends Msg<any> ? never : Vec<T> {
+	public static from_elem<T extends CheckElem<T>>(value: T, n: number) {
 		const v = new this<T>(n);
 		if (n > 0) {
 			for (let i = 0; i < n - 1; i++) v.buf[i] = clone_of(value);
 			v.buf[n - 1] = value;
 			v._len = n;
 		}
-		return v;
+		return v as T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : Vec<T>;
 	}
 
-	public static default<T extends CheckElem<T> = never>(): CheckElem<T> extends Msg<any>
-		? never
-		: Vec<T> {
+	public static default<T extends CheckElem<T>>() {
 		return new Vec<T>(0) as CheckElem<T> extends Msg<any> ? never : Vec<T>;
 	}
 
-	public static from_iter<T extends CheckElem<T> = never>(
-		items: Iterable<T>
-	): CheckElem<T> extends Msg<any> ? never : Vec<T> {
+	public static from_iter<T extends CheckElem<T>>(items: Iterable<T>) {
 		const array = Array.from(items);
-		return new this<T>(array.length, array);
+		return new this<T>(array.length, array) as T extends Msg<any>
+			? never
+			: CheckElem<T> extends Msg<any>
+				? never
+				: Vec<T>;
 	}
 
 	public to_array() {

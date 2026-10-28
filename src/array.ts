@@ -2,8 +2,7 @@ import { is_eq } from "./cmp.ts";
 import { define_pattern, Pattern, type Pat } from "./match_impl.ts";
 import { Option } from "./option.ts";
 import { FixedArray as Impl } from "./array_impl.ts";
-import type { TraitInstance } from "./trait_impl.ts";
-import type { AsyncDrop, Drop } from "./ops.ts";
+import type { CheckElem, Msg } from "../lib/types.ts";
 
 type TupleToIndices<Tuple extends any[]> = {
 	[Index in Extract<keyof Tuple, `${number}`>]: Tuple[Index];
@@ -16,81 +15,36 @@ type FixedIndices<T, N extends number, R extends T[] = []> = R["length"] extends
 type FixedArray<T, N extends number> = TupleToIndices<FixedIndices<T, N>> & Impl<T, N>;
 
 interface FixedArrayConstructor {
-	// new call
 	/**
-	 * Creates a fixed array of items that implement AsyncDrop trait
+	 * Creates a FixedArray using new call.
+	 * @description `[T; N]`
+	 * @remarks Elements that implement both `AsyncDrop` and `Drop` must be Iterable (e.g. `Vec`, `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
+	 * which path to take.
 	 */
-	new <T extends TraitInstance<typeof AsyncDrop>, N extends number>(
+	new <T extends CheckElem<T>, N extends number>(
 		initial_value: T,
 		size: N
-	): FixedArray<T, N>;
+	): T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : FixedArray<T, N>;
 	/**
-	 * Creates a fixed array of items that implement Drop trait
+	 * Creates a FixedArray using function call.
+	 * @description `[T; N]`
+	 * @remarks Elements that implement both `AsyncDrop` and `Drop` must be Iterable (e.g. `Vec`, `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
+	 * which path to take.
 	 */
-	new <T extends TraitInstance<typeof Drop>, N extends number>(
+	<T extends CheckElem<T>, N extends number>(
 		initial_value: T,
 		size: N
-	): FixedArray<T, N>;
+	): T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : FixedArray<T, N>;
 	/**
-	 * Creates a fixed array
+	 * Creates a FixedArray from a function callback.
+	 * @description `[T; N]`
+	 * @remarks Elements that implement both `AsyncDrop` and `Drop` must be Iterable (e.g. `Vec`, `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
+	 * which path to take.
 	 */
-	new <T extends unknown, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
-	// function call
-	/**
-	 * Creates a fixed array of items that implement AsyncDrop trait
-	 */
-	<T extends TraitInstance<typeof AsyncDrop>, N extends number>(
-		initial_value: T,
-		size: N
-	): FixedArray<T, N>;
-	/**
-	 * Creates a fixed array of items that implement Drop trait
-	 */
-	<T extends TraitInstance<typeof Drop>, N extends number>(
-		initial_value: T,
-		size: N
-	): FixedArray<T, N>;
-	/**
-	 * Creates a fixed array
-	 */
-	<T extends unknown, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
-	/**
-	 * Creates a fixed array of elements that extends Iterable and AsyncDrop and Drop traits
-	 */
-	from_fn<
-		T extends TraitInstance<typeof AsyncDrop> &
-			TraitInstance<typeof Drop> &
-			Iterable<any, any, any>,
-		N extends number
-	>(
+	from_fn<T extends CheckElem<T>, N extends number>(
 		N: N,
 		f: (index: number) => T
-	): FixedArray<T, N>;
-	/**
-	 * Creates a fixed array of items that implement AsyncDrop trait
-	 */
-	from_fn<T extends TraitInstance<typeof AsyncDrop>, N extends number>(
-		N: N,
-		f: (index: number) => T
-	): FixedArray<T, N>;
-	/**
-	 * Creates a fixed array of items that implement Drop trait
-	 */
-	from_fn<T extends TraitInstance<typeof Drop>, N extends number>(
-		N: N,
-		f: (index: number) => T
-	): FixedArray<T, N>;
-	/**
-	 * Do not mix types in arrays
-	 */
-	from_fn<T extends TraitInstance<typeof AsyncDrop | typeof Drop>, N extends number>(
-		N: N,
-		f: (index: number) => T
-	): never;
-	/**
-	 * Creates a fixed array
-	 */
-	from_fn<T extends unknown, N extends number>(N: N, f: (index: number) => T): FixedArray<T, N>;
+	): T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : FixedArray<T, N>;
 }
 
 function FixedArrayImpl(this: any, initial_value: any, size: number) {

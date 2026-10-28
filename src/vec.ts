@@ -15,9 +15,9 @@ interface Vec<T> extends Impl<T> {}
 
 declare module "./default.ts" {
 	interface DefaultCall {
-		default<T extends typeof Vec<any>>(
-			type: T
-		): T extends typeof Vec<infer U extends CheckElem<U>> ? Vec<U> : never;
+		default<T extends CheckElem<T>>(
+			type: typeof Vec<T>
+		): T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : Vec<T>;
 	}
 }
 
@@ -28,7 +28,7 @@ declare module "./default.ts" {
  * `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
  * which path to take.
  */
-function vec<T extends CheckElem<T> = never>(): CheckElem<T> extends Msg<any> ? never : Vec<T>;
+function vec<T extends CheckElem<T>>(): CheckElem<T> extends Msg<any> ? never : Vec<T>;
 // vec![0, 0, 0]
 /**
  * Creates a Vec from an array
@@ -39,7 +39,7 @@ function vec<T extends CheckElem<T> = never>(): CheckElem<T> extends Msg<any> ? 
  */
 function vec<T extends CheckElem<T>>(
 	array: Array<T>
-): CheckElem<T> extends Msg<any> ? never : Vec<T>;
+): T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : Vec<T>;
 
 // vec![elem; n]
 /**
@@ -52,7 +52,7 @@ function vec<T extends CheckElem<T>>(
 function vec<T extends CheckElem<T>>(
 	elem: T,
 	n: number
-): CheckElem<T> extends Msg<any> ? never : Vec<T>;
+): T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : Vec<T>;
 
 function vec(arg1?: any, arg2?: any) {
 	if (arg2) {
