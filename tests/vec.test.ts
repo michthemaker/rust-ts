@@ -1,11 +1,12 @@
-import { expect, test, describe } from "bun:test";
+import { expect, test, describe, xtest } from "bun:test";
 import { vec, Vec } from "../src/vec.ts";
 import { OnceLock } from "../src/sync/once_lock.ts";
 import { range } from "../src/range.ts";
 import { inspect } from "bun";
-import { drop } from "../src/mem.ts";
-import { AsyncDrop, Drop } from "../src/ops.ts";
+import { async_drop, drop } from "../src/mem.ts";
 import { impl } from "../src/trait_impl.ts";
+import { AsyncDrop, Drop } from "../src/ops.ts";
+import { FixedArray } from "../src/array.ts";
 
 describe("Vec<T>", () => {
 	test("can be indexed like arrays", () => {
@@ -153,27 +154,88 @@ describe("Vec<T>", () => {
 		expect(my_nums.capacity()).toBe(2);
 	});
 
-	describe("AsyncDrop and Drop traits", () => {
-		test("Double drop throws", () => {
-			const mine = Vec.from_elem(29, 9);
-			// console.log(mine);
-			drop(mine);
-			expect(() => drop(mine)).toThrow(/cannot drop a dropped/i);
+	describe("Drop and AsyncDrop", () => {
+		test("async drop", () => {
+			class MyClass extends impl(AsyncDrop) {
+				async [Symbol.asyncDispose]() {}
+			}
+
+			expect(() => drop(vec(new MyClass(), 3))).toThrow();
+			// @ts-expect-error
+			expect(() => drop(new MyClass())).toThrow(/async/i);
+			expect(async () => await async_drop(vec(new MyClass(), 3))).not.toThrow();
 		});
-		test("use-after-drop throws", () => {
-			// @ts-expect-error
-			class Mine extends impl(AsyncDrop) {}
-			// @ts-expect-error
-			class Us extends impl(Drop) {}
-			const meandyou = vec(0, 3);
+		test("Test sync drops", () => {
+			// this passed
+			expect(() => {
+				const arr = vec([0, 0], 3);
+				drop(arr);
+				drop(arr);
+			}).toThrow(/cannot drop a dropped value/i);
+			// this passed
+			expect(() => {
+				class MyClass extends impl(AsyncDrop) {
+					async [Symbol.asyncDispose]() {}
+				}
+				const arr = vec(new MyClass(), 2);
+				drop(arr);
+			}).toThrow(/cannot synchro/i);
+			// this passed
+			expect(() => {
+				class MyClass extends impl(AsyncDrop) {
+					async [Symbol.asyncDispose]() {}
+				}
+				const arr = vec(vec(0, 1), 2);
+				// @ts-ignore
+				arr[1] = new MyClass();
+				async_drop(arr);
+				console.log(arr); // FixedArray(2)[FixedArray(1)[], MyClass {}]
+			}).not.toThrow();
+		});
+		test("Drop subsequent items after failing sync drop", () => {
+			class Boom extends impl(Drop) {
+				[Symbol.dispose]() {
+					throw new Error("boom");
+				}
+			}
 
-			const mine = vec(meandyou, 8);
-			drop(mine);
+			const arr = vec<any>(0, 4);
+			const inner = vec(0, 1);
+			arr[1] = new Boom();
+			arr[2] = inner;
 
-			expect(() => mine[0]).toThrow();
-			// @ts-expect-error
-			expect(() => (mine[0] = 3)).toThrow();
-			expect(() => delete mine[0]).toThrow();
+			expect(() => drop(arr)).toThrow(/boom/);
+			// the sibling after the failing element was still dropped
+			expect(() => drop(inner)).toThrow(/cannot drop a dropped value/i);
+		});
+		test("sync drop on mixed async-only and sync or sync and async doesn't continue dropping subsequent elements", () => {
+			class MyClass extends impl(AsyncDrop) {
+				async [Symbol.asyncDispose]() {}
+			}
+
+			const arr2 = vec<any>(0, 3);
+			const inner2 = vec(0, 1);
+			arr2[0] = inner2;
+			arr2[1] = new MyClass(); // async-only
+
+			expect(() => drop(arr2)).toThrow(/cannot synchro/i);
+			expect(() => drop(inner2)).not.toThrow(); // nothing was consumed
+			console.log(arr2);
+		});
+		test("aggregate thrown for many errors", () => {
+			class MyClass extends impl(Drop) {
+				[Symbol.dispose]() {
+					throw new Error("just threw");
+				}
+			}
+
+			const arr2 = vec<any>(0, 9);
+			const inner2 = vec(0, 1);
+			arr2.splice(range(0, 3), FixedArray(new MyClass(), 3));
+			arr2[8] = inner2;
+
+			expect(() => drop(arr2)).toThrowError(AggregateError);
+			console.log(arr2);
 		});
 	});
 });

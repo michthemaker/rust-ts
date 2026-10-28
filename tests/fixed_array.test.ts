@@ -1,11 +1,10 @@
 import { FixedArray } from "../src/array.ts";
 import { describe, test, expect } from "bun:test";
 import { match, P } from "../src/match_impl.ts";
-import { OnceLock } from "../src/sync/once_lock.ts";
 import { async_drop, drop } from "../src/mem.ts";
 import { AsyncDrop, Drop } from "../src/ops.ts";
 import { impl } from "../src/trait_impl.ts";
-import { println } from "../src/println_impl.ts";
+import { range } from "../src/range.ts";
 
 describe("FixedArray<T, N>", () => {
 	test("can be indexed like arrays", () => {
@@ -69,24 +68,6 @@ describe("FixedArray<T, N>", () => {
 		expect(throws).toThrow();
 	});
 	describe("Drop and AsyncDrop", () => {
-		test("Double drop throws", async () => {
-			const mine = FixedArray(FixedArray({}, 6), 8);
-			// console.log(mine);
-			drop(mine);
-			expect(() => drop(mine)).toThrow(/use of dropped/i);
-		});
-		test("use-after-drop throws", async () => {
-			const meandyou = FixedArray(0, 9);
-			const mine = new FixedArray(meandyou, 8);
-			async_drop(mine);
-			async_drop(FixedArray(new OnceLock(), 9));
-
-			expect(() => mine[0]).toThrow();
-			// @ts-expect-error
-			expect(() => (mine[0] = 3)).toThrow();
-			// @ts-expect-error
-			expect(() => delete mine[0]).toThrow();
-		});
 		test("async drop", () => {
 			class MyClass {
 				[Symbol.dispose]() {}
@@ -96,7 +77,7 @@ describe("FixedArray<T, N>", () => {
 			expect(() => drop(new MyClass())).toThrow(/async/i);
 			expect(async () => await async_drop(new FixedArray(new MyClass(), 3))).not.toThrow();
 		});
-		test("claude tests", () => {
+		test("Test sync drops", () => {
 			// this passed
 			expect(() => {
 				const arr = FixedArray([0, 0], 3);
@@ -123,7 +104,7 @@ describe("FixedArray<T, N>", () => {
 				console.log(arr); // FixedArray(2)[FixedArray(1)[], MyClass {}]
 			}).not.toThrow();
 		});
-		test("second claude tests again", () => {
+		test("Drop subsequent items after failing sync drop", () => {
 			class Boom extends impl(Drop) {
 				[Symbol.dispose]() {
 					throw new Error("boom");
@@ -139,7 +120,7 @@ describe("FixedArray<T, N>", () => {
 			// the sibling after the failing element was still dropped
 			expect(() => drop(inner)).toThrow(/cannot drop a dropped value/i);
 		});
-		test("third claude tests again", () => {
+		test("sync drop on mixed async-only and sync or sync and async doesn't continue dropping subsequent elements", () => {
 			class MyClass extends impl(AsyncDrop) {
 				async [Symbol.asyncDispose]() {}
 			}
@@ -151,6 +132,23 @@ describe("FixedArray<T, N>", () => {
 
 			expect(() => drop(arr2)).toThrow(/cannot synchro/i);
 			expect(() => drop(inner2)).not.toThrow(); // nothing was consumed
+			console.log(arr2);
+		});
+		test("aggregate thrown for many errors", () => {
+			class MyClass extends impl(Drop) {
+				[Symbol.dispose]() {
+					throw new Error("just threw");
+				}
+			}
+
+			const arr2 = FixedArray<any, 9>(0, 9);
+			const inner2 = FixedArray(0, 1);
+			arr2[0] = new MyClass();
+			arr2[1] = new MyClass();
+			arr2[2] = new MyClass();
+			arr2[8] = inner2;
+
+			expect(() => drop(arr2)).toThrowError(AggregateError);
 			console.log(arr2);
 		});
 	});

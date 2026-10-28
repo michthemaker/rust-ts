@@ -10,6 +10,7 @@ import { clone_of } from "./clone.ts";
 import { impl, impls } from "./trait_impl.ts";
 import { Default } from "./default.ts";
 import { AsyncDrop, Drop } from "./ops.ts";
+import { is_iterable } from "../lib/iterable.ts";
 
 const MAX_ARRAY_LENGTH = 4_294_967_295; // 2^32 - 1
 function panic(msg: string): never {
@@ -52,38 +53,70 @@ export class Vec<T> extends impl(Default, AsyncDrop, Drop, Slice)<T> {
 		this._capacity = capacity;
 		const this_value = this;
 		let dropped = false;
+
+		const is_dispose = (p: PropertyKey) => p === Symbol.dispose || p === Symbol.asyncDispose;
+		// keys that tooling touches implicitly; everything else string-keyed panics after drop
+		const ALLOWED_AFTER_DROP = new Set<PropertyKey>(["constructor", "then"]);
+
+		const finish = (errors: unknown[]) => {
+			if (errors.length === 1) throw errors[0];
+			if (errors.length > 1)
+				throw new AggregateError(errors, "multiple errors while dropping Vec<T>");
+		};
+
 		this[Symbol.dispose] = () => {
 			if (dropped) panic(`use of dropped value: Vec<T>`);
-			dropped = true;
+
+			// pass 1: validate only, nothing is mutated if this panics.
+			// mirrors mem.drop: an AsyncDrop item is only OK if it is iterable AND also Drop
 			for (let i = 0; i < this._len; i++) {
 				const item = this.buf[this.start + i];
-				if (impls(item, Drop)) {
-					item[Symbol.dispose]();
-				} else if (impls(item, AsyncDrop)) {
+				if (impls(item, AsyncDrop) && !(is_iterable(item) && impls(item, Drop))) {
 					panic("cannot synchronously drop an asynchronous resource. Use async_drop instead.");
 				}
 			}
+
+			dropped = true;
+
+			// pass 2: drop in order, keep going past failures
+			const errors: unknown[] = [];
+			for (let i = 0; i < this._len; i++) {
+				const item = this.buf[this.start + i];
+				try {
+					if (impls(item, Drop)) item[Symbol.dispose]();
+				} catch (e) {
+					errors.push(e);
+				}
+			}
 			this.buf.length = 0;
-			console.log(this);
+			finish(errors);
 		};
 		this[Symbol.asyncDispose] = async () => {
 			if (dropped) panic(`use of dropped value: Vec<T>`);
-			dropped = true;
+			dropped = true; // set before awaiting so concurrent use panics too
+
+			const errors: unknown[] = [];
 			for (let i = 0; i < this._len; i++) {
 				const item = this.buf[this.start + i];
-				if (impls(item, AsyncDrop)) {
-					await item[Symbol.asyncDispose]();
-				} else if (impls(item, Drop)) item[Symbol.dispose]();
+				try {
+					if (impls(item, AsyncDrop)) await item[Symbol.asyncDispose]();
+					else if (impls(item, Drop)) item[Symbol.dispose]();
+				} catch (e) {
+					errors.push(e);
+				}
 			}
 			this.buf.length = 0;
-			return undefined;
+			finish(errors);
 		};
 
 		const proxy = new Proxy(this_value, {
 			get(target, prop) {
-				if ([Symbol.asyncDispose, Symbol.dispose].includes(prop as any) && dropped)
-					panic(`cannot drop a dropped value: Vec<T>`);
-				if (dropped) panic(`use of dropped value: Vec<T>`);
+				if (dropped) {
+					if (is_dispose(prop)) panic(`cannot drop a dropped value: Vec<T>`);
+					if (typeof prop === "string" && !ALLOWED_AFTER_DROP.has(prop))
+						panic(`use of dropped value: Vec<T>`);
+					// other symbols (inspect, toPrimitive, iterator probes...) fall through
+				}
 				if (typeof prop === "string" && INDEX.test(prop)) {
 					const index = Number(prop);
 					if (!Number.isNaN(index) && Number.isInteger(index)) {
@@ -98,9 +131,10 @@ export class Vec<T> extends impl(Default, AsyncDrop, Drop, Slice)<T> {
 				return typeof value === "function" ? (value as Function).bind(target) : value;
 			},
 			set(target, prop, value): boolean {
-				if ([Symbol.asyncDispose, Symbol.dispose].includes(prop as any) && dropped)
-					panic(`cannot drop a dropped value: Vec<T>`);
-				if (dropped) panic(`use of dropped value: Vec<T>`);
+				if (dropped) {
+					if (is_dispose(prop)) panic(`cannot drop a dropped value: Vec<T>`);
+					if (typeof prop === "string") panic(`use of dropped value: Vec<T>`);
+				}
 				if (typeof prop === "string" && INDEX.test(prop)) {
 					// performs an update or insert
 					const index = Number(prop);

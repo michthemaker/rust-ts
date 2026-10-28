@@ -29,9 +29,10 @@ export class FixedArray<T, N extends number> extends impl(Drop, AsyncDrop, Slice
 				`Requested allocation on FixedArray<T, N> exceeds engine memory limits.\nMaximum FixedArray<T, N> length is ${MAX_ARRAY_LENGTH} `
 			);
 		const arr = new Array(size);
-		for (let i = 0; i < size; i++) {
+		for (let i = 0; i < size - 1; i++) {
 			arr[i] = clone_of(initial_value);
 		}
+		arr[size - 1] = initial_value;
 		super(arr, 0, size);
 		const this_value = this;
 		let dropped = false;
@@ -73,7 +74,6 @@ export class FixedArray<T, N extends number> extends impl(Drop, AsyncDrop, Slice
 			this.buf.length = 0;
 			finish(errors);
 		};
-
 		this[Symbol.asyncDispose] = async () => {
 			if (dropped) panic(`use of dropped value: FixedArray<T, N>`);
 			dropped = true; // set before awaiting so concurrent use panics too
