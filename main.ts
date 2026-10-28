@@ -15,8 +15,19 @@
 // 	[P._]() {}
 
 import { FixedArray } from "./src/array.ts";
+import { AsyncDrop, Drop } from "./src/ops.ts";
+import { impl } from "./src/trait_impl.ts";
+import { Vec, vec } from "./src/vec.ts";
 
-// });
+class MyClass extends impl(AsyncDrop, Drop) {
+	async [Symbol.asyncDispose]() {}
+	[Symbol.dispose]() {}
+}
+
+// this should show never actually
+vec<MyClass>();
+vec<Vec<number>>();
+
 const value = {};
 const arr = FixedArray(value, 1);
 
