@@ -1,7 +1,7 @@
 import type { Err, Ok } from "../src/result.ts";
 import { type None, type Some } from "../src/option.ts";
 import type { TraitInstance } from "../src/trait_impl.ts";
-import type { AsyncDrop, Drop } from "../src/ops.ts";
+import type { AsyncDrop, Container, Drop } from "../src/ops.ts";
 
 export type Prettify<T> = {
 	[K in keyof T]: T[K];
@@ -63,9 +63,9 @@ export type Homogeneous<T> = [T] extends [boolean]
 export type DropCheck<T> = [T] extends [
 	TraitInstance<typeof AsyncDrop> & TraitInstance<typeof Drop>
 ]
-	? [T] extends [Iterable<any>]
+	? [T] extends [TraitInstance<typeof Container>]
 		? unknown
-		: Msg<"element implements both AsyncDrop and Drop but is not Iterable: implement one, or make it iterable">
+		: Msg<"implements both Drop and AsyncDrop but is not a Container. Remove one trait, or add Container if it owns other values">
 	: unknown;
 
 /* ---- the single constraint to use everywhere ---- */

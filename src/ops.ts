@@ -19,3 +19,16 @@ export const AsyncDrop = trait((b) => {
 	}
 	return AsyncDrop;
 });
+
+export const CONTAINER = Symbol.for("rust-ts.Container");
+
+/** Marks a type whose dispose forwards to the values it owns. Not in Rust: there it's automatic (drop glue). */
+export const Container = trait((b) => {
+	abstract class Container extends b {
+		[CONTAINER] = true as const;
+		protected constructor(...args: any[]) {
+			super(...args);
+		}
+	}
+	return Container;
+});

@@ -2,10 +2,11 @@ import { Clone, clone_of } from "../clone.ts";
 import { is_eq, PartialEq } from "../cmp.ts";
 import { Default } from "../default.ts";
 import { Debug, FMT, type FmtOptions } from "../fmt.ts";
+import { Drop } from "../ops.ts";
 import { Result } from "../result.ts";
 import { impl } from "../trait_impl.ts";
 
-class OnceLock<T> extends impl(PartialEq, Default, Debug, Clone) {
+class OnceLock<T> extends impl(PartialEq, Default, Debug, Drop, Clone) {
 	#value: T | null = null;
 	#locked: boolean = false;
 
@@ -50,6 +51,8 @@ class OnceLock<T> extends impl(PartialEq, Default, Debug, Clone) {
 	static default<T>() {
 		return new OnceLock<T>();
 	}
+
+	[Symbol.dispose]() {}
 }
 
 export { OnceLock };

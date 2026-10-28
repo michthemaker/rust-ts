@@ -7,6 +7,7 @@ import { impl } from "./trait_impl.ts";
 import { Debug, FMT } from "./fmt.ts";
 import { Clone, clone_of } from "./clone.ts";
 import type { CheckElem } from "../lib/types.ts";
+import { Container } from "./ops.ts";
 
 const INDEX = /^(0|[1-9]\d*)$/;
 
@@ -62,6 +63,7 @@ function as_array<T extends CheckElem<T>>(src: Source<T>): readonly T[] {
 export abstract class Slice<T extends CheckElem<T>> extends impl(
 	Clone,
 	PartialEq<Source<any>>,
+	Container,
 	Debug
 ) {
 	protected buf: T[];

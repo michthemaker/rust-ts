@@ -1,31 +1,43 @@
-import { is_iterable } from "../lib/iterable.ts";
-import { AsyncDrop, Drop } from "./ops.ts";
+import { is_thenable } from "../lib/is_thenable.ts";
+import { AsyncDrop, Container, Drop } from "./ops.ts";
 import { impls, type TraitInstance } from "./trait_impl.ts";
 
 type DropError<Msg extends string> = { [K in Msg]: never };
 
 type CheckDrop<T> = [T] extends [TraitInstance<typeof AsyncDrop>]
-	? [T] extends [Iterable<unknown>]
+	? [T] extends [TraitInstance<typeof Container>]
 		? [T] extends [TraitInstance<typeof Drop>]
-			? unknown // iterable with AsyncDrop + Drop: ok (Vec, FixedArray, yours)
-			: DropError<"AsyncDrop-only iterable: implement Drop too, or use async_drop">
-		: DropError<"cannot synchronously drop an AsyncDrop value: use async_drop">
+			? unknown // Container with AsyncDrop + Drop: ok (Vec, FixedArray, OnceLock, yours)
+			: DropError<"drop(): this container is async-only. Use `await async_drop(x)`, or implement Drop on it">
+		: [T] extends [TraitInstance<typeof Drop>]
+			? DropError<"drop(): implements both Drop and AsyncDrop but is not a Container. Remove one trait, or add Container if it owns other values">
+			: DropError<"drop(): this value is async-only and cannot be dropped synchronously. Use `await async_drop(x)`">
 	: [T] extends [TraitInstance<typeof Drop>]
 		? unknown // Drop only: ok
-		: DropError<"the trait bound `Drop` is not satisfied">;
+		: DropError<"drop(): this value does not implement Drop. Add `impl(Drop)` and a [Symbol.dispose]() method">;
+
+const DROPPED = new WeakSet<object>();
+const is_object = (v: unknown): v is object =>
+	(typeof v === "object" && v !== null) || typeof v === "function";
+const name_of = (v: unknown) => (v === null ? "null" : ((v as any)?.constructor?.name ?? typeof v));
+function panic(msg: string): never {
+	throw new Error(msg);
+}
 
 /**
  * Disposes of a value by calling `[Symbol.dispose]()` on it.
  *
- * @remarks Dropping consumes the value: any later use panics. Containers such as
- * `FixedArray<T, N>`, `Vec<T>` or a custom Iterable that implements both `Drop` and `AsyncDrop`
- * dispose their elements in order and then become unusable.
+ * @remarks Dropping consumes the value: any later use panics. Containers (types that implement
+ * `Container`, such as `FixedArray<T, N>`, `Vec<T>`, `Tuple` and `OnceLock<T>`) dispose the
+ * values they own in order and then become unusable.
  *
  * - A throwing element does not stop the others. Every element is disposed, the container is
  *   consumed, and the error is rethrown (an `AggregateError` if several elements threw).
  * - If an element is async-only (implements `AsyncDrop` but not `Drop`), `drop` throws before
  *   disposing anything. The container is left intact, so `async_drop` can still be used on it.
- * - A custom Iterable that implements both traits is responsible for disposing its own elements.
+ * - A type may implement both `Drop` and `AsyncDrop` only if it is also a `Container`. A plain
+ *   class implementing both is rejected at the type level, because `drop` could not tell which
+ *   path to take. Containers are responsible for disposing the values they own.
  *
  * @throws when the value does not implement `Drop`, is an async-only value, contains an
  * async-only element, or was already dropped
@@ -55,32 +67,49 @@ type CheckDrop<T> = [T] extends [TraitInstance<typeof AsyncDrop>]
  * const sockets = FixedArray(new Socket(), 3);
  * drop(sockets); // throws: cannot synchronously drop an asynchronous resource
  * await async_drop(sockets); // works: disposes all three
+ *
+ * // type error: implements both traits but is not a Container
+ * class Both extends impl(Drop, AsyncDrop) { ... }
+ * drop(new Both());
+ *
+ * // no error: implements both traits and is a Container
+ * class Both_Container extends impl(Drop, AsyncDrop, Container) { ... }
+ * drop(new Both_Container());
  * ```
  */
 export function drop<T>(resource: T & CheckDrop<T>): void;
 export function drop(resource: any) {
-	const impls_sync_drop = impls(resource, Drop);
-	if (impls(resource, AsyncDrop)) {
-		if (is_iterable(resource) && impls_sync_drop) return resource[Symbol.dispose]();
-		throw new Error("cannot synchronously drop an asynchronous resource. Use async_drop instead.");
-	}
+	if (is_object(resource) && DROPPED.has(resource)) panic("cannot drop a dropped value");
 
-	if (impls_sync_drop) {
-		return resource[Symbol.dispose]();
-	}
+	const sync = impls(resource, Drop);
+	const async_ = impls(resource, AsyncDrop);
 
-	const type_name = (resource as any)?.constructor?.name ?? typeof resource;
-	throw new Error(`the trait bound \`${type_name}: Drop\` is not satisfied`);
+	if (async_ && !sync)
+		panic("cannot synchronously drop an asynchronous resource. Use `await async_drop(x)` instead.");
+	if (async_ && sync && !impls(resource, Container))
+		panic(
+			`\`${name_of(resource)}\` implements both Drop and AsyncDrop but is not a Container. Remove one trait, or add Container if it owns other values.`
+		);
+	if (!sync) panic(`the trait bound \`${name_of(resource)}: Drop\` is not satisfied`);
+
+	// validation passed: from here on the value counts as consumed, even if dispose throws
+	if (is_object(resource)) DROPPED.add(resource);
+
+	const result = resource[Symbol.dispose]();
+	if (is_thenable(result))
+		panic(
+			`\`${name_of(resource)}[Symbol.dispose]\` returned a promise. Implement AsyncDrop instead of using an async dispose.`
+		);
 }
 
 /**
  * Disposes of an asynchronous value by calling `[Symbol.asyncDispose]()` on it.
  *
  * @remarks The returned promise must be awaited. Dropping consumes the value, just like `drop`.
- * Containers dispose their elements in order: `AsyncDrop` elements are awaited and `Drop`-only
- * elements are disposed synchronously, so mixed containers are fine. A throwing element does not
- * stop the others, and the error is rethrown once all elements have been processed (an
- * `AggregateError` if several threw).
+ * Containers dispose the values they own in order: `AsyncDrop` elements are awaited and
+ * `Drop`-only elements are disposed synchronously, so containers holding either kind are fine.
+ * A throwing element does not stop the others, and the error is rethrown once all elements have
+ * been processed (an `AggregateError` if several threw).
  *
  * @throws when the value does not implement `AsyncDrop` or was already dropped
  * @example
@@ -94,11 +123,10 @@ export function drop(resource: any) {
  *
  * await async_drop(new Socket());
  *
- * // mixed container: Sockets are awaited, plain Drop values are disposed synchronously
- * const mixed = FixedArray<any, 2>(0, 2);
- * mixed[0] = new Socket();
- * mixed[1] = new Connection();
- * await async_drop(mixed) // dropped
+ * // collections are homogeneous, so mix kinds with a Tuple:
+ * // Sockets are awaited, plain Drop values are disposed synchronously
+ * const mixed = Tuple(new Socket(), new Connection());
+ * await async_drop(mixed); // both disposed, mixed is now consumed
  *
  * async_drop(new Connection()); // type error: Connection does not implement AsyncDrop
  * ```
@@ -106,10 +134,10 @@ export function drop(resource: any) {
 export async function async_drop<T extends TraitInstance<typeof AsyncDrop>>(
 	resource: T
 ): Promise<void> {
-	if (impls(resource, AsyncDrop)) {
-		return await resource[Symbol.asyncDispose]();
-	}
+	if (is_object(resource) && DROPPED.has(resource)) panic("cannot drop a dropped value");
+	if (!impls(resource, AsyncDrop))
+		panic(`the trait bound \`${name_of(resource)}: AsyncDrop\` is not satisfied`);
 
-	const type_name = (resource as any)?.constructor?.name ?? typeof resource;
-	throw new Error(`the trait bound \`${type_name}: AsyncDrop\` is not satisfied`);
+	DROPPED.add(resource as object); // before awaiting, so concurrent drops panic
+	await resource[Symbol.asyncDispose]();
 }
