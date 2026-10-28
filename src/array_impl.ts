@@ -1,4 +1,5 @@
 import { is_iterable } from "../lib/iterable.ts";
+import type { CheckElem } from "../lib/types.ts";
 import { clone_of } from "./clone.ts";
 import { FMT } from "./fmt.ts";
 import { AsyncDrop, Drop } from "./ops.ts";
@@ -14,7 +15,11 @@ function panic(msg: string): never {
 	throw new Error(msg);
 }
 
-export class FixedArray<T, N extends number> extends impl(Drop, AsyncDrop, Slice)<T> {
+export class FixedArray<T extends CheckElem<T>, N extends number> extends impl(
+	Drop,
+	AsyncDrop,
+	Slice
+)<T> {
 	[FMT](_depth: number, options: any, inspect: Function) {
 		const formatted_elements = this.buf.map((item) => inspect(item, options));
 		return `FixedArray(${this._len})[${formatted_elements.join(", ")}]`;
@@ -130,7 +135,7 @@ export class FixedArray<T, N extends number> extends impl(Drop, AsyncDrop, Slice
 		}) as any;
 	}
 
-	public static from_fn<T, N extends number>(N: N, f: (index: number) => T) {
+	public static from_fn<T extends CheckElem<T>, N extends number>(N: N, f: (index: number) => T) {
 		const fixed = new FixedArray<T, N>(undefined as T, N);
 		for (let index of range(0, N)) {
 			fixed[index] = f(index);
@@ -152,7 +157,7 @@ export class FixedArray<T, N extends number> extends impl(Drop, AsyncDrop, Slice
 	}
 
 	// array only transform
-	public map<U>(f: MapTransformFn<T, U>) {
+	public map<U extends CheckElem<U>>(f: MapTransformFn<T, U>) {
 		const new_fixed = new FixedArray<U, N>(undefined as U, this._len as N);
 		for (let i of range(0, this._len)) {
 			new_fixed[i] = f(this.buf[i], i);

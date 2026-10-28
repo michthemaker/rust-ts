@@ -12,7 +12,8 @@ type FixedIndices<T, N extends number, R extends T[] = []> = R["length"] extends
 	? R
 	: FixedIndices<T, N, [T, ...R]>;
 
-type FixedArray<T, N extends number> = TupleToIndices<FixedIndices<T, N>> & Impl<T, N>;
+type FixedArray<T extends CheckElem<T>, N extends number> = TupleToIndices<FixedIndices<T, N>> &
+	Impl<T, N>;
 
 interface FixedArrayConstructor {
 	/**

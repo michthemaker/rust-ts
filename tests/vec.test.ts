@@ -88,8 +88,11 @@ describe("Vec<T>", () => {
 		expect(() => console.log(my_slice[0])).toThrow(/slice invalidated/i);
 	});
 	test(".get call returns an Option<T>", () => {
+		// @ts-expect-error
 		const my_nums = vec([new OnceLock(), 5]);
+		// @ts-expect-error
 		expect(my_nums.get(0).is_some()).to_equal(true);
+		// @ts-expect-error
 		console.log(my_nums.get(0));
 	});
 	test(".reserve throws on invalid `additional` argument", () => {

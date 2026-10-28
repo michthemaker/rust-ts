@@ -45,6 +45,7 @@
 // Vec.default();
 // Vec.from_iter([new MyClass3()]);
 //
+
 // vec();
 // FixedArray<string | number, 0>(new MyClass3(), 9 as any);
 //
