@@ -4,6 +4,7 @@ import type { Trait as TTrait, LooseInstanceType } from "./trait_impl.ts";
 const __first_half = (() => {
 	return trait((b: any) => {
 		abstract class Default extends b {
+			declare static readonly __instance: Default;
 			// @ts-ignore
 			// oxlint-disable-next-line no-unused-vars
 			static default<T>(): Default {

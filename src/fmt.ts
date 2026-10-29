@@ -2,6 +2,7 @@ import { trait } from "./trait_impl.ts";
 
 export const Debug = trait((b) => {
 	abstract class Debug extends b {
+		declare static readonly __instance: Debug;
 		abstract [FMT](
 			depth: number,
 			options: FmtOptions,

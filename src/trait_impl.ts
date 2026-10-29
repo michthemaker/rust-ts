@@ -107,11 +107,77 @@ export interface SubTrait<
 	superTraits: ST;
 }
 
-/** generate trait (regular variant)  */
+/**
+ * Defines a trait: an abstract class that other classes opt into with `impl(...)`.
+ *
+ * @remarks Every trait class **must declare `__instance`**, set to the trait class itself:
+ *
+ * ```typescript
+ * declare static readonly __instance: MyTrait;
+ * ```
+ *
+ * Trait classes have a `protected` constructor, which TypeScript refuses to treat as a public
+ * construct signature. Without the brand, `TraitInstance<typeof MyTrait>` falls back to the
+ * class's `prototype` type, and TypeScript fills every type parameter of that type with `any`.
+ * The trait still works, but a generic trait silently loses its type argument:
+ * `Clone<string>` would give `clone(): any` instead of `clone(): string`. The brand hands the
+ * real instance type to `TraitInstance`, so the generic survives.
+ *
+ * - **Where:** inside the abstract class, next to its other members.
+ * - **Cost:** none at runtime. `declare` emits nothing.
+ * - **Which traits:** always add it, for a single rule. It only matters for generic traits, but
+ *   it is harmless on the others.
+ * - **Forgetting it is silent.** Check by hovering `TraitInstance<typeof MyTrait<string>>`: it
+ *   should read `MyTrait<string>.MyTrait`, not `MyTrait<any>.MyTrait`.
+ * - **Limit:** this works because a trait's `T` belongs to the factory function, not the class.
+ *   A normal generic class cannot do the same, since static members cannot reference class type
+ *   parameters.
+ *
+ * @example
+ * ```typescript
+ * // a generic trait: `T` is the factory's type parameter, used by the abstract member
+ * export const Clone = <T>() =>
+ * 	trait((b) => {
+ * 		abstract class Clone extends b {
+ * 			declare static readonly __instance: Clone;
+ * 			abstract clone(): T;
+ * 			protected constructor(...args: any[]) {
+ * 				super(...args);
+ * 			}
+ * 		}
+ * 		return Clone;
+ * 	});
+ *
+ * class Point extends impl(Clone<Point>) {
+ * 	clone(): Point { ... }
+ * }
+ * ```
+ */
 /* eslint no-redeclare: off */
 export function trait<T extends ConsFactory<AnyCons>>(factory: T): Trait<ReturnType<T>>;
 
-/** generate trait (super-trait variant)  */
+/**
+ * Defines a trait that requires other traits (its supertraits).
+ *
+ * @remarks Same rules as the regular variant, including the `__instance` brand: declare
+ * `declare static readonly __instance: MyTrait;` in the class, or a generic trait loses its type
+ * argument without any error. Anything that implements this trait must also implement its
+ * supertraits, and `factory` receives a base that already includes them.
+ *
+ * @example
+ * ```typescript
+ * const Printable = trait([Debug], (b) => {
+ * 	abstract class Printable extends b {
+ * 		declare static readonly __instance: Printable;
+ * 		abstract print(): void;
+ * 		protected constructor(...args: any[]) {
+ * 			super(...args);
+ * 		}
+ * 	}
+ * 	return Printable;
+ * });
+ * ```
+ */
 export function trait<
 	const ST extends (SubTrait | TypeFactory<SubTrait>)[],
 	T extends ConsFactory<
