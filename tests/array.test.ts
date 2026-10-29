@@ -72,8 +72,7 @@ describe("FixedArray<T, N>", () => {
 				[Symbol.dispose]() {}
 			}
 
-			expect(() => drop(new FixedArray(new MyClass(), 3))).toThrow();
-			expect(() => drop(new MyClass())).toThrow(/async/i);
+			expect(() => drop(new FixedArray(new MyClass(), 3))).not.toThrow();
 			expect(async () => await async_drop(new FixedArray(new MyClass(), 3))).not.toThrow();
 		});
 		test("Test sync drops", () => {

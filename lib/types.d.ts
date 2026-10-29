@@ -65,7 +65,7 @@ export type DropCheck<T> = [T] extends [
 ]
 	? [T] extends [TraitInstance<typeof Container>]
 		? unknown
-		: Msg<"implements both Drop and AsyncDrop but is not a Container. Remove one trait, or add Container if it owns other values">
+		: Msg<"implements both Drop and AsyncDrop but is not a Container. Remove one trait, or implement Container trait if it owns other values">
 	: unknown;
 
 /* ---- the single constraint to use everywhere ---- */

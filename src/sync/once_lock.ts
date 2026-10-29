@@ -1,58 +1,22 @@
-import { Clone, clone_of } from "../clone.ts";
-import { is_eq, PartialEq } from "../cmp.ts";
-import { Default } from "../default.ts";
-import { Debug, FMT, type FmtOptions } from "../fmt.ts";
-import { Drop } from "../ops.ts";
-import { Result } from "../result.ts";
-import { impl } from "../trait_impl.ts";
+import type { DropCheck, Msg } from "../../lib/types";
+import { OnceLock as Impl } from "./once_lock_impl.ts";
 
-class OnceLock<T> extends impl(PartialEq, Default, Debug, Drop, Clone) {
-	#value: T | null = null;
-	#locked: boolean = false;
+type Thenable = { then: (...args: any[]) => any };
 
-	[FMT](
-		_depth: number,
-		options: FmtOptions,
-		inspect: (arg: any, options: FmtOptions) => string
-	): string {
-		return `OnceLock(${!this.#locked ? "Uninitialized" : inspect(this.#value, options)})`;
-	}
+type NotThenable<T> = [T] extends [Thenable]
+	? Msg<"OnceLock<T>: T cannot be a Thenable value. Await it and store the resolved value">
+	: unknown;
 
-	get() {
-		return this.#value;
-	}
+interface OnceLock<T extends DropCheck<T> & NotThenable<T>> extends Impl<T> {}
 
-	set(initial: T): Result<null, string> {
-		if (this.#locked) return Result.Err("This OnceLock has already been initiliazed.");
-		else {
-			this.#value = initial;
-			this.#locked = true;
-			return Result.Ok(null);
-		}
-	}
-
-	eq(other: OnceLock<T>): boolean {
-		if (other instanceof OnceLock) {
-			return is_eq(this.#value, other.get());
-		} else return false;
-	}
-
-	ne(other: OnceLock<T>): boolean {
-		return !this.eq(other);
-	}
-
-	clone(): OnceLock<T> {
-		const once_lock = new OnceLock<T>();
-		once_lock.#locked = this.#locked;
-		if (this.#locked === true) once_lock.#value = clone_of(this.#value);
-		return once_lock;
-	}
-
-	static default<T>() {
-		return new OnceLock<T>();
-	}
-
-	[Symbol.dispose]() {}
+interface OnceLockConstructor {
+	new <T extends DropCheck<T> & NotThenable<T>>(): DropCheck<T> extends Msg<any>
+		? never
+		: NotThenable<T> extends Msg<any>
+			? never
+			: OnceLock<T>;
 }
+
+const OnceLock = Impl as unknown as OnceLockConstructor;
 
 export { OnceLock };
