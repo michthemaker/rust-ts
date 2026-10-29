@@ -1,6 +1,6 @@
 
 git add .
-git commit -m "[feat] shell.sh now removed from .gitignore "
+git commit -m "[feat] updated README.md"
 git push origin feat/traits
 
 

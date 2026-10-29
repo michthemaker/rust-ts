@@ -8,7 +8,7 @@ Highlights:
 
 - `Option` and `Result` types for safer value and error handling
 - `OnceLock` for one-time initialization
-- `mpsc` / `spsc` channel primitives for async and sync communication
+- `mpsc` / `mpsc` channel primitives for async and sync communication
 - lightweight threading helpers
 - protocol and shell utilities inspired by Rust-style composition
 
