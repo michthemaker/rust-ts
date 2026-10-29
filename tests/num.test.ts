@@ -48,7 +48,7 @@ describe("Sized numbers", () => {
 	);
 	const float_types_and_edges = Tuple(Tuple(f32, -3.4028236e38, 3.4028236e38));
 	test("unsigned types fails at min max edges", () => {
-		for (const t_and_e of unsigned_types_and_edges) {
+		for (const t_and_e of unsigned_types_and_edges.clone()) {
 			const [fn, min_edge, max_edge] = t_and_e;
 			// @ts-expect-error
 			expect(() => fn(min_edge)).toThrow();
@@ -57,7 +57,7 @@ describe("Sized numbers", () => {
 		}
 	});
 	test("signed types fails at min max edges", () => {
-		for (const t_and_e of signed_types_and_edges) {
+		for (const t_and_e of signed_types_and_edges.clone()) {
 			const [fn, min_edge, max_edge] = t_and_e;
 			// @ts-expect-error
 			expect(() => fn(min_edge)).toThrow();
@@ -66,7 +66,7 @@ describe("Sized numbers", () => {
 		}
 	});
 	test("f32 types fails at min max edges", () => {
-		for (const t_and_e of float_types_and_edges) {
+		for (const t_and_e of float_types_and_edges.clone()) {
 			const [fn, min_edge, max_edge] = t_and_e;
 			// @ts-expect-error
 			expect(() => fn(min_edge)).toThrow();
@@ -88,7 +88,7 @@ describe("Sized numbers", () => {
 	});
 	describe("Decimals", () => {
 		test("decimal builds on max digits and max significant places", () => {
-			for (const t of decimal_types_and_sizes) {
+			for (const t of decimal_types_and_sizes.clone()) {
 				const [fn, max_digits, , max_places, , all_nines] = t;
 				expect(() => fn(max_digits)).not.toThrow();
 				expect(() => fn(max_places)).not.toThrow();
@@ -96,7 +96,7 @@ describe("Sized numbers", () => {
 			}
 		});
 		test("decimal types fails at edges", () => {
-			for (const t of decimal_types_and_sizes) {
+			for (const t of decimal_types_and_sizes.clone()) {
 				const [fn, , over_digits, , over_places, , digits_over_at_max_places] = t;
 				expect(() => fn(over_digits as any)).toThrow();
 				expect(() => fn(over_places as any)).toThrow(/literal out of range/i);
@@ -419,7 +419,7 @@ describe("Sized numbers", () => {
 		});
 	});
 	test("'.is' on the in-range and out-of-range sides", () => {
-		for (const t_and_e of unsigned_types_and_edges) {
+		for (const t_and_e of unsigned_types_and_edges.clone()) {
 			const [fn, min_edge, max_edge] = t_and_e;
 			if (typeof min_edge === "bigint" && typeof max_edge === "bigint") {
 				// in-range check
@@ -435,7 +435,7 @@ describe("Sized numbers", () => {
 				expect(fn.is(max_edge)).toBe(false);
 			}
 		}
-		for (const t_and_e of signed_types_and_edges) {
+		for (const t_and_e of signed_types_and_edges.clone()) {
 			const [fn, min_edge, max_edge] = t_and_e;
 			if (typeof min_edge === "bigint" && typeof max_edge === "bigint") {
 				// in-range check
@@ -451,7 +451,7 @@ describe("Sized numbers", () => {
 				expect(fn.is(max_edge)).toBe(false);
 			}
 		}
-		for (const t_and_e of float_types_and_edges) {
+		for (const t_and_e of float_types_and_edges.clone()) {
 			const [fn, min_edge, max_edge] = t_and_e;
 			// Safe in-range values
 			expect(fn.is(fn.MIN_POSITIVE)).toBe(true);
@@ -468,7 +468,7 @@ describe("Sized numbers", () => {
 		}
 	});
 	test("'.try_from' on the in-range and out-of-range sides", () => {
-		for (const t_and_e of unsigned_types_and_edges) {
+		for (const t_and_e of unsigned_types_and_edges.clone()) {
 			const [fn, min_edge, max_edge] = t_and_e;
 			if (typeof min_edge === "bigint" && typeof max_edge === "bigint") {
 				// in-range check
@@ -484,7 +484,7 @@ describe("Sized numbers", () => {
 				expect(fn.try_from(max_edge).is_err()).to_equal(true);
 			}
 		}
-		for (const t_and_e of signed_types_and_edges) {
+		for (const t_and_e of signed_types_and_edges.clone()) {
 			const [fn, min_edge, max_edge] = t_and_e;
 			if (typeof min_edge === "bigint" && typeof max_edge === "bigint") {
 				// in-range check
@@ -500,7 +500,7 @@ describe("Sized numbers", () => {
 				expect(fn.try_from(max_edge).is_err()).to_equal(true);
 			}
 		}
-		for (const t_and_e of float_types_and_edges) {
+		for (const t_and_e of float_types_and_edges.clone()) {
 			const [fn, min_edge, max_edge] = t_and_e;
 			// Safe in-range values
 			expect(fn.try_from(fn.MIN_POSITIVE)).to_equal(Result.Ok(fn.MIN_POSITIVE));

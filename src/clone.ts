@@ -26,6 +26,7 @@ export function derive_clone<T extends object>(self: T): T {
 export const Clone = <T>() =>
 	trait((b) => {
 		abstract class Clone extends b {
+			declare static readonly __instance: Clone;
 			abstract clone(): T;
 			protected constructor(...args: any[]) {
 				super(...args);

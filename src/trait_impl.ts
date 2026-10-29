@@ -79,9 +79,12 @@ export type LooseInstanceType<T> = T extends abstract new (...args: any) => infe
 	? R
 	: T extends new (...args: any) => infer R
 		? R
-		: T extends Function & { prototype: infer P }
-			? P
-			: any;
+		: // support our type for static readonly
+			T extends Function & { readonly __instance: infer I }
+			? I
+			: T extends Function & { prototype: infer P }
+				? P
+				: any;
 
 /*  ==== TRAIT DEFINITION ====  */
 

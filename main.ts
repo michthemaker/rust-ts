@@ -16,10 +16,12 @@
 //
 // import { FixedArray } from "./src/array.ts";
 // import { Default } from "./src/default.ts";
-import { AsyncDrop, Container, Drop } from "./src/ops.ts";
+import { FixedArray } from "./src/array.ts";
+// import { AsyncDrop, Container, Drop } from "./src/ops.ts";
 // import { Option } from "./src/option.ts";
 // import { OnceLock } from "./src/sync/once_lock.ts";
-import { impl } from "./src/trait_impl.ts";
+// import { impl } from "./src/trait_impl.ts";
+import { Vec } from "./src/vec.ts";
 // import { Vec, vec } from "./src/vec.ts";
 //
 // class MyClass extends impl(AsyncDrop) {
@@ -63,3 +65,5 @@ import { impl } from "./src/trait_impl.ts";
 // const arr = FixedArray.from_fn(3, () => new MyClass());
 //
 // console.log(value === arr.last().unwrap(), arr.len());
+
+console.log(Vec.default().eq(FixedArray(0, 0)));

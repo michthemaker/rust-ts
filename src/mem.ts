@@ -92,8 +92,9 @@ export function drop(resource: any) {
 		);
 	if (!sync) panic(`the trait bound \`${name_of(resource)}: Drop\` is not satisfied`);
 
-	// validation passed: from here on the value counts as consumed, even if dispose throws
-	if (is_object(resource)) DROPPED.add(resource);
+	// plain values are consumed from here on, even if dispose throws.
+	// Containers track this themselves, since they can still refuse after validation.
+	if (is_object(resource) && !impls(resource, Container)) DROPPED.add(resource);
 
 	const result = resource[Symbol.dispose]();
 	if (is_thenable(result))
@@ -138,6 +139,8 @@ export async function async_drop<T extends TraitInstance<typeof AsyncDrop>>(
 	if (!impls(resource, AsyncDrop))
 		panic(`the trait bound \`${name_of(resource)}: AsyncDrop\` is not satisfied`);
 
-	DROPPED.add(resource as object); // before awaiting, so concurrent drops panic
+	// same rule: only non-containers go in the set. Marked before awaiting so a concurrent
+	// second call panics. Containers must set their own flag before their first await.
+	if (is_object(resource) && !impls(resource, Container)) DROPPED.add(resource as object);
 	await resource[Symbol.asyncDispose]();
 }
