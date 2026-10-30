@@ -1,5 +1,6 @@
 /node_modules
 *.sh
+!shell.sh
 all.txt
 /dist
 /project

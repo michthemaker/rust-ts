@@ -2,15 +2,14 @@ import { trait } from "./trait_impl.ts";
 
 export const Debug = trait((b) => {
 	abstract class Debug extends b {
+		declare static readonly __instance: Debug;
 		abstract [FMT](
 			depth: number,
 			options: FmtOptions,
 			inspect: (arg: any, options: FmtOptions) => string
 		): string;
-		// @ts-ignore
-		// oxlint-disable-next-line no-unused-vars
 		protected constructor(...args: any[]) {
-			super();
+			super(...args);
 		}
 	}
 	return Debug;

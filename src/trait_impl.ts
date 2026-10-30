@@ -79,9 +79,12 @@ export type LooseInstanceType<T> = T extends abstract new (...args: any) => infe
 	? R
 	: T extends new (...args: any) => infer R
 		? R
-		: T extends Function & { prototype: infer P }
-			? P
-			: any;
+		: // support our type for static readonly
+			T extends Function & { readonly __instance: infer I }
+			? I
+			: T extends Function & { prototype: infer P }
+				? P
+				: any;
 
 /*  ==== TRAIT DEFINITION ====  */
 
@@ -104,11 +107,77 @@ export interface SubTrait<
 	superTraits: ST;
 }
 
-/** generate trait (regular variant)  */
+/**
+ * Defines a trait: an abstract class that other classes opt into with `impl(...)`.
+ *
+ * @remarks Every trait class **must declare `__instance`**, set to the trait class itself:
+ *
+ * ```typescript
+ * declare static readonly __instance: MyTrait;
+ * ```
+ *
+ * Trait classes have a `protected` constructor, which TypeScript refuses to treat as a public
+ * construct signature. Without the brand, `TraitInstance<typeof MyTrait>` falls back to the
+ * class's `prototype` type, and TypeScript fills every type parameter of that type with `any`.
+ * The trait still works, but a generic trait silently loses its type argument:
+ * `Clone<string>` would give `clone(): any` instead of `clone(): string`. The brand hands the
+ * real instance type to `TraitInstance`, so the generic survives.
+ *
+ * - **Where:** inside the abstract class, next to its other members.
+ * - **Cost:** none at runtime. `declare` emits nothing.
+ * - **Which traits:** always add it, for a single rule. It only matters for generic traits, but
+ *   it is harmless on the others.
+ * - **Forgetting it is silent.** Check by hovering `TraitInstance<typeof MyTrait<string>>`: it
+ *   should read `MyTrait<string>.MyTrait`, not `MyTrait<any>.MyTrait`.
+ * - **Limit:** this works because a trait's `T` belongs to the factory function, not the class.
+ *   A normal generic class cannot do the same, since static members cannot reference class type
+ *   parameters.
+ *
+ * @example
+ * ```typescript
+ * // a generic trait: `T` is the factory's type parameter, used by the abstract member
+ * export const Clone = <T>() =>
+ * 	trait((b) => {
+ * 		abstract class Clone extends b {
+ * 			declare static readonly __instance: Clone;
+ * 			abstract clone(): T;
+ * 			protected constructor(...args: any[]) {
+ * 				super(...args);
+ * 			}
+ * 		}
+ * 		return Clone;
+ * 	});
+ *
+ * class Point extends impl(Clone<Point>) {
+ * 	clone(): Point { ... }
+ * }
+ * ```
+ */
 /* eslint no-redeclare: off */
 export function trait<T extends ConsFactory<AnyCons>>(factory: T): Trait<ReturnType<T>>;
 
-/** generate trait (super-trait variant)  */
+/**
+ * Defines a trait that requires other traits (its supertraits).
+ *
+ * @remarks Same rules as the regular variant, including the `__instance` brand: declare
+ * `declare static readonly __instance: MyTrait;` in the class, or a generic trait loses its type
+ * argument without any error. Anything that implements this trait must also implement its
+ * supertraits, and `factory` receives a base that already includes them.
+ *
+ * @example
+ * ```typescript
+ * const Printable = trait([Debug], (b) => {
+ * 	abstract class Printable extends b {
+ * 		declare static readonly __instance: Printable;
+ * 		abstract print(): void;
+ * 		protected constructor(...args: any[]) {
+ * 			super(...args);
+ * 		}
+ * 	}
+ * 	return Printable;
+ * });
+ * ```
+ */
 export function trait<
 	const ST extends (SubTrait | TypeFactory<SubTrait>)[],
 	T extends ConsFactory<
@@ -304,9 +373,23 @@ type DeriveTraitsStats<T extends AnyTraitOrFactory[] | [...AnyTraitOrFactory[], 
 
 /*  ---- TRAIT DERIVATION ----  */
 
-/*  utility type: derive type from one or more traits or trait type factories  */
+/*  traits-only half, as an abstract mixin ctor. `unknown` = identity for `&`  */
+type TraitsMixin<Ts extends AnyTraitOrFactory[]> = Ts extends []
+	? unknown
+	: abstract new (...args: any[]) => LooseInstanceType<DeriveTraitsConsAll<Ts>>;
+
+type TraitsStats<Ts extends AnyTraitOrFactory[]> = Ts extends []
+	? unknown
+	: DeriveTraitsStatsAll<Ts>;
+
 type DeriveTraits<T extends AnyTraitOrFactory[] | [...AnyTraitOrFactory[], AnyCons]> =
-	DeriveTraitsCons<T> & DeriveTraitsStats<T>;
+	/* 1st: pure trait list. Must stay first: AnyCons matches any function */
+	T extends AnyTraitOrFactory[]
+		? DeriveTraitsCons<T> & DeriveTraitsStats<T>
+		: /* 2nd: traits + base. Base stays WHOLE, so its generics survive */
+			T extends [...infer Others extends AnyTraitOrFactory[], infer Last extends AnyCons]
+			? Last & TraitsMixin<Others> & TraitsStats<Others>
+			: never;
 
 /*  ---- TRAIT DERIVATION RUNTIME ----  */
 
@@ -351,6 +434,35 @@ const deriveTrait = (
 const reverseTraitList = (traits: (SubTrait | TypeFactory<SubTrait>)[]) =>
 	traits.slice().reverse() as (SubTrait | TypeFactory<SubTrait>)[];
 
+// type AbstractCtor<I = {}> = abstract new (...args: any[]) => I;
+
+// // union -> intersection
+// type U2I<U> = (U extends any ? (x: U) => void : never) extends (x: infer I) => void ? I : never;
+//
+// // merge every trait's instance type into one intersection.
+// // Mapped tuple -> [number] gives a union of instances -> U2I makes it an intersection.
+// type MergeTraits<Ts extends readonly unknown[]> =
+//   [Ts[number]] extends [never]
+//     ? {}
+//     : U2I<{ [K in keyof Ts]: TraitInstance<Ts[K]> }[number]>;
+//
+// type DeriveTraitsSecond<T extends readonly unknown[]> =
+//   T extends [...infer Init, infer Last]
+//     ? Last extends AnyTraitOrFactory            // check trait FIRST, it's the more specific shape
+//       ? AbstractCtor<MergeTraits<T>>            // impl(A, B, C)
+//       : Last & AbstractCtor<MergeTraits<Init>>  // impl(A, B, BaseCons): Base keeps its generics
+//     : never;
+
+/**
+     *
+     T extends [...AnyTraitOrFactory[], infer B]
+		? T extends [...infer A, AnyCons]
+			? A[number] extends SubTrait<infer C>
+				? C & B
+				: any
+			: any
+		: any
+     */
 /** implement trait  */
 export function impl<
 	T extends [AnyTraitOrFactory, ...AnyTraitOrFactory[]] | [...AnyTraitOrFactory[], AnyCons]
@@ -379,7 +491,8 @@ export function impl<
 	/*  iterate over all traits  */
 	for (const trait of reverseTraitList(lot)) clz = deriveTrait(trait, clz, derived);
 
-	return clz as DeriveTraits<T>;
+	return clz as any;
+	// return clz as DeriveTraits<T>;
 }
 
 /*  ==== TRAIT TYPE-GUARDING ====  */
@@ -399,7 +512,6 @@ type Derived<T extends SubTrait | TypeFactory<SubTrait> | Cons> =
 
 /**  the instance type a trait value (or trait type factory) describes
  * TraitInstance<typeof PartialEq<T>>
- *
  */
 export type TraitInstance<T extends SubTrait | TypeFactory<SubTrait>> =
 	T extends TypeFactory<SubTrait>
@@ -408,12 +520,34 @@ export type TraitInstance<T extends SubTrait | TypeFactory<SubTrait>> =
 			? DerivedType<T>
 			: never;
 
+/**  the constructor type a trait value (or trait type factory) describes
+ * TraitConstructor<typeof PartialEq<any>>
+ */
+export type TraitConstructor<T extends SubTrait | TypeFactory<SubTrait>> =
+	T extends TypeFactory<SubTrait<infer A>> ? A : T extends SubTrait<infer B> ? B : never;
+
 function is_strict_class(value: any) {
 	if (typeof value !== "function") return false;
 	const descriptor = Object.getOwnPropertyDescriptor(value, "prototype");
 	// Built-in functions like Math.max don't have a prototype, while classes always do
 	return descriptor ? !descriptor.writable : false;
 }
+
+/**
+ * type guard for checking whether class instance or class itself
+ * implements a trait
+ *
+ * @example
+ * ``typescript
+ * type Check = Impls<typeof Slice<any>, typeof Debug>
+ * // hover on Check shows true
+ * const my_vec = Vec.with_capacity(0);
+ * type Check = Impls<typeof my_vec, typeof Debug>
+ * // hover on Check shows true
+ * ``
+ */
+export type Impls<T, U extends SubTrait | TypeFactory<SubTrait>> =
+	T extends TraitInstance<U> ? true : T extends TraitConstructor<U> ? true : false;
 
 /**
  * type guard for checking whether class instance or class itself implements a trait

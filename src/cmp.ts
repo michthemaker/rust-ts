@@ -3,12 +3,11 @@ import { impls, trait } from "./trait_impl.ts";
 export const PartialEq = <T>() =>
 	trait((b) => {
 		abstract class PartialEq extends b {
+			declare static readonly __instance: PartialEq;
 			abstract eq(other: T): boolean;
 			abstract ne(other: T): boolean;
-			// @ts-ignore
-			// oxlint-disable-next-line no-unused-vars
 			protected constructor(...args: any[]) {
-				super();
+				super(...args);
 			}
 		}
 		return PartialEq;

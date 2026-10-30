@@ -6,9 +6,9 @@ import { type Range } from "./range.ts";
 import { impl } from "./trait_impl.ts";
 import { Debug, FMT } from "./fmt.ts";
 import { Clone, clone_of } from "./clone.ts";
-import { Default } from "./default.ts";
+import type { CheckElem } from "../lib/types.ts";
+import { Container } from "./ops.ts";
 
-const DEBUG = Symbol.for("nodejs.util.inspect.custom");
 const INDEX = /^(0|[1-9]\d*)$/;
 
 function panic(msg: string): never {
@@ -17,7 +17,7 @@ function panic(msg: string): never {
 
 const cmp_default = (a: any, b: any): number => (a < b ? -1 : a > b ? 1 : 0);
 
-type Source<T> = Slice<T> | readonly T[];
+type Source<T extends CheckElem<T>> = Slice<T> | readonly T[];
 
 /** Turns a range into a checked [start, end) pair, panicking like Rust's slice indexing. */
 export function resolve_range(r: Range, len: number): [number, number] {
@@ -45,13 +45,13 @@ let make_vec: ((items: any[]) => any) | undefined;
 export function register_vec_factory(factory: (items: any[]) => any): void {
 	make_vec = factory;
 }
-function new_vec<U>(items: U[]): Vec<U> {
+function new_vec<U extends CheckElem<U>>(items: U[]): Vec<U> {
 	if (!make_vec)
 		throw new Error("Vec is not loaded: import it before calling to_vec/concat/join/repeat");
 	return make_vec(items);
 }
 
-function as_array<T>(src: Source<T>): readonly T[] {
+function as_array<T extends CheckElem<T>>(src: Source<T>): readonly T[] {
 	return Array.isArray(src) ? src : (src as Slice<T>).to_array();
 }
 
@@ -60,7 +60,12 @@ function as_array<T>(src: Source<T>): readonly T[] {
  * Never copies on construction. Sub-slices share `buf`, so mutation through
  * one view is visible in the owner (and in every overlapping view).
  */
-export abstract class Slice<T> extends impl(Clone, Default, PartialEq<Source<any>>, Debug) {
+export abstract class Slice<T extends CheckElem<T>> extends impl(
+	Clone,
+	PartialEq<Source<any>>,
+	Container,
+	Debug
+) {
 	protected buf: T[];
 	protected start: number;
 	protected _len: number;
@@ -86,7 +91,7 @@ export abstract class Slice<T> extends impl(Clone, Default, PartialEq<Source<any
 
 		return new Proxy(this, {
 			get(target, prop) {
-				if (prop !== DEBUG) target.guard?.();
+				if (prop !== FMT) target.guard?.();
 				if (typeof prop === "string" && INDEX.test(prop)) {
 					const index = Number(prop);
 					if (index >= target._len)
@@ -296,7 +301,8 @@ export abstract class Slice<T> extends impl(Clone, Default, PartialEq<Source<any
 	}
 
 	/** Flattens a slice of slices/arrays into one Vec. (For strings use `join("")`.) */
-	public concat<U>(this: Slice<Source<U>>): Vec<U> {
+	// @ts-ignore
+	public concat<U extends CheckElem<U>>(this: Slice<Source<U>>): Vec<U> {
 		const out: U[] = [];
 		for (let i = 0; i < this._len; i++)
 			for (const x of as_array(this.buf[this.start + i])) out.push(x);
@@ -305,7 +311,8 @@ export abstract class Slice<T> extends impl(Clone, Default, PartialEq<Source<any
 
 	/** Strings: joins with `sep`. Slices/arrays: flattens with the slice `sep` between them. */
 	public join(this: Slice<string>, sep: string): string;
-	public join<U>(this: Slice<Source<U>>, sep: Source<U>): Vec<U>;
+	// @ts-ignore
+	public join<U extends CheckElem<U>>(this: Slice<Source<U>>, sep: Source<U>): Vec<U>;
 	public join(this: Slice<any>, sep: any): any {
 		if (typeof sep === "string") return this.to_array().join(sep);
 		const separator = as_array<any>(sep);

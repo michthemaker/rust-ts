@@ -2,6 +2,7 @@ import { is_eq } from "./cmp.ts";
 import { define_pattern, Pattern, type Pat } from "./match_impl.ts";
 import { Option } from "./option.ts";
 import { FixedArray as Impl } from "./array_impl.ts";
+import type { CheckElem, Msg } from "../lib/types.ts";
 
 type TupleToIndices<Tuple extends any[]> = {
 	[Index in Extract<keyof Tuple, `${number}`>]: Tuple[Index];
@@ -11,14 +12,40 @@ type FixedIndices<T, N extends number, R extends T[] = []> = R["length"] extends
 	? R
 	: FixedIndices<T, N, [T, ...R]>;
 
-type FixedArray<T, N extends number> = TupleToIndices<FixedIndices<T, N>> & Impl<T, N>;
+type FixedArray<T extends CheckElem<T>, N extends number> = TupleToIndices<FixedIndices<T, N>> &
+	Impl<T, N>;
 
 interface FixedArrayConstructor {
-	new <T, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
-	<T, N extends number>(initial_value: T, size: N): FixedArray<T, N>;
-	from_fn<T, N extends number>(N: N, f: (index: number) => T): FixedArray<T, N>;
-	/** FixedArray doesn't implement Default trait */
-	default(): never;
+	/**
+	 * Creates a FixedArray using new call.
+	 * @description `[T; N]`
+	 * @remarks Elements that implement both `AsyncDrop` and `Drop` must be Iterable (e.g. `Vec`, `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
+	 * which path to take.
+	 */
+	new <T extends CheckElem<T>, N extends number>(
+		initial_value: T,
+		size: N
+	): T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : FixedArray<T, N>;
+	/**
+	 * Creates a FixedArray using function call.
+	 * @description `[T; N]`
+	 * @remarks Elements that implement both `AsyncDrop` and `Drop` must be Iterable (e.g. `Vec`, `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
+	 * which path to take.
+	 */
+	<T extends CheckElem<T>, N extends number>(
+		initial_value: T,
+		size: N
+	): T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : FixedArray<T, N>;
+	/**
+	 * Creates a FixedArray from a function callback.
+	 * @description `[T; N]`
+	 * @remarks Elements that implement both `AsyncDrop` and `Drop` must be Iterable (e.g. `Vec`, `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
+	 * which path to take.
+	 */
+	from_fn<T extends CheckElem<T>, N extends number>(
+		N: N,
+		f: (index: number) => T
+	): T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : FixedArray<T, N>;
 }
 
 function FixedArrayImpl(this: any, initial_value: any, size: number) {
@@ -33,7 +60,6 @@ function FixedArrayImpl(this: any, initial_value: any, size: number) {
 
 // Copy statics from the real class
 FixedArrayImpl.from_fn = Impl.from_fn.bind(Impl);
-FixedArrayImpl.default = Impl.default.bind(Impl);
 
 // Make `instanceof FixedArray` work
 Object.defineProperty(FixedArrayImpl, Symbol.hasInstance, {
@@ -53,18 +79,6 @@ declare module "./match_impl.ts" {
 	}
 	interface PatternInterface {
 		FixedArray<T>(expected: T[]): Pat<"rust-ts::std::FixedArray<T, N>">;
-	}
-}
-
-declare module "./default.ts" {
-	interface DefaultCall {
-		/**
-		 * FixedArray doesn't implement Default Trait
-		 * @note Calling `Default.default(FixedArray<any, 0>)` will throw
-		 */
-		default<T extends typeof FixedArray<any, any>>(
-			type: T extends typeof FixedArray<any, any> ? `FixedArray doesnt implement Default trait` : T
-		): never;
 	}
 }
 

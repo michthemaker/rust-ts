@@ -2,8 +2,9 @@ import { Option } from "./option.ts";
 import { define_pattern, Pattern, type Pat } from "./match_impl.ts";
 import { is_eq } from "./cmp.ts";
 import { Vec as Impl } from "./vec_impl.ts";
+import type { CheckElem, Msg } from "../lib/types.ts";
 
-class Vec<T> extends Impl<T> {
+class Vec<T extends CheckElem<T> = never> extends Impl<T> {
 	constructor() {
 		// @ts-expect-error
 		super(...arguments);
@@ -14,16 +15,44 @@ interface Vec<T> extends Impl<T> {}
 
 declare module "./default.ts" {
 	interface DefaultCall {
-		default<T extends typeof Vec<any>>(type: T): T extends typeof Vec<infer U> ? Vec<U> : never;
+		default<T extends CheckElem<T>>(
+			type: typeof Vec<T>
+		): T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : Vec<T>;
 	}
 }
 
-/** `vec![]` */
-function vec<T>(): Vec<T>;
-/** `vec![0, 0, 0]` */
-function vec<T>(array: Array<T>): Vec<T>;
-/** `vec![elem; n]`: n elements, each a clone of `value` (the last one is `value` itself). */
-function vec<T>(elem: T, n: number): Vec<T>;
+/**
+ * Creates an empty Vec.
+ * @description `vec![]`
+ * @remarks Elements that implement both `AsyncDrop` and `Drop` must be Iterable (e.g. `Vec`,
+ * `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
+ * which path to take.
+ */
+function vec<T extends CheckElem<T>>(): CheckElem<T> extends Msg<any> ? never : Vec<T>;
+// vec![0, 0, 0]
+/**
+ * Creates a Vec from an array
+ * @description `vec![0, 0, 0]`
+ * @remarks Elements that implement both `AsyncDrop` and `Drop` must be Iterable (e.g. `Vec`,
+ * `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
+ * which path to take.
+ */
+function vec<T extends CheckElem<T>>(
+	array: Array<T>
+): T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : Vec<T>;
+
+// vec![elem; n]
+/**
+ * Creates a Vec from an array
+ * @description `vec![0u8; 6]`
+ * @remarks Elements that implement both `AsyncDrop` and `Drop` must be Iterable (e.g. `Vec`,
+ * `FixedArray`); a plain class implementing both is rejected, because `drop` could not tell
+ * which path to take.
+ */
+function vec<T extends CheckElem<T>>(
+	elem: T,
+	n: number
+): T extends Msg<any> ? never : CheckElem<T> extends Msg<any> ? never : Vec<T>;
 
 function vec(arg1?: any, arg2?: any) {
 	if (arg2) {
@@ -33,9 +62,9 @@ function vec(arg1?: any, arg2?: any) {
 		return Vec.from_elem(arg1, arg2);
 	} else if (arg1)
 		// @ts-ignore
-		return Vec.from(arg1);
+		return Vec.from_iter(arg1);
 	// @ts-ignore
-	else return Vec.from([]);
+	else return Vec.from_iter([]);
 }
 
 declare module "./match_impl.ts" {

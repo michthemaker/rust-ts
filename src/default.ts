@@ -3,18 +3,17 @@ import type { Trait as TTrait, LooseInstanceType } from "./trait_impl.ts";
 
 const __first_half = (() => {
 	return trait((b: any) => {
-		// @ts-ignore
-		// oxlint-disable-next-line no-unused-vars
-		abstract class Default<T> extends b {
-			static default<T>(): Default<T> {
+		abstract class Default extends b {
+			declare static readonly __instance: Default;
+			// @ts-ignore
+			// oxlint-disable-next-line no-unused-vars
+			static default<T>(): Default {
 				throw new Error(
 					`required static default method not implemented on ${this.name} that implements Default trait`
 				);
 			}
-			// @ts-ignore
-			// oxlint-disable-next-line no-unused-vars
 			protected constructor(...args: any[]) {
-				super();
+				super(...args);
 			}
 		}
 		return Default;
